@@ -1,0 +1,29 @@
+# Root .gitignore for project
+
+# Node
+node_modules/
+**/node_modules/
+
+# Env files
+*.env
+frontend/.env
+backend/.env
+
+# Build / dist
+dist/
+frontend/dist/
+backend/dist/
+
+# Uploads / files
+uploads/
+backend/uploads/
+uploads/*
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+*.log
+
+# Optional lockfiles (ignore if you don't want them tracked)
+**/package-lock.json
