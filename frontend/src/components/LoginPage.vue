@@ -39,11 +39,6 @@
           {{ loading ? 'Loading...' : 'Login' }}
         </button>
       </div>
-
-      <div class="login-footer">
-        <p>Username: kandel</p>
-        <p>Password: kandelsekecosukses</p>
-      </div>
     </div>
   </div>
 </template>
