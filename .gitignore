@@ -27,3 +27,7 @@ uploads/*
 
 # Optional lockfiles (ignore if you don't want them tracked)
 **/package-lock.json
+
+# Arsip files
+backend/arsip/
+arsip/

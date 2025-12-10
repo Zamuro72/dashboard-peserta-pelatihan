@@ -1,8 +1,9 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { parseExcel } from '../utils/excelParser.js';
+import { parseExcel, extractYearFromPelatihan } from '../utils/excelParser.js';
 import db from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -39,6 +40,40 @@ const upload = multer({
   }
 });
 
+// Create archive directory structure
+const createArchiveDir = (year) => {
+  const archiveBaseDir = path.join(__dirname, '..', 'arsip');
+  const yearDir = path.join(archiveBaseDir, year);
+  
+  if (!fs.existsSync(archiveBaseDir)) {
+    fs.mkdirSync(archiveBaseDir, { recursive: true });
+  }
+  
+  if (!fs.existsSync(yearDir)) {
+    fs.mkdirSync(yearDir, { recursive: true });
+  }
+  
+  return yearDir;
+};
+
+// Move file to archive
+const moveToArchive = (sourceFile, year, originalName) => {
+  const yearDir = createArchiveDir(year);
+  const timestamp = Date.now();
+  const ext = path.extname(originalName);
+  const baseName = path.basename(originalName, ext);
+  const archiveFileName = `${baseName}-${timestamp}${ext}`;
+  const destPath = path.join(yearDir, archiveFileName);
+  
+  fs.copyFileSync(sourceFile, destPath);
+  
+  return {
+    path: destPath,
+    fileName: archiveFileName,
+    year: year
+  };
+};
+
 // Upload Excel file
 router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
   try {
@@ -52,10 +87,21 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     const data = await parseExcel(req.file.path);
 
     if (!data || data.length === 0) {
+      // Delete uploaded file
+      if (fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
       return res.status(400).json({ 
         error: 'File Excel kosong atau format tidak sesuai' 
       });
     }
+
+    // Detect year from first row
+    const firstRow = data[0];
+    const year = extractYearFromPelatihan(firstRow.pelatihan, firstRow.ujikom_praktek);
+
+    // Move file to archive before processing
+    const archiveInfo = moveToArchive(req.file.path, year, req.file.originalname);
 
     // Prepare statement untuk insert
     const insertStmt = db.prepare(`
@@ -92,7 +138,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
         } catch (err) {
           errorCount++;
           errors.push({
-            row: row.no || 'unknown',
+            row: row.no || row.nama_peserta || 'unknown',
             error: err.message
           });
         }
@@ -102,21 +148,136 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     // Execute transaction
     insertMany(data);
 
+    // Delete temporary upload file
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
     res.json({
       success: true,
       message: 'Upload berhasil',
       summary: {
         total: data.length,
         success: successCount,
-        failed: errorCount
+        failed: errorCount,
+        year: year,
+        archived: archiveInfo.fileName
       },
       errors: errors.length > 0 ? errors : undefined
     });
 
   } catch (error) {
     console.error('Upload error:', error);
+    
+    // Cleanup on error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    
     res.status(500).json({ 
       error: 'Gagal mengupload file',
+      message: error.message 
+    });
+  }
+});
+
+// Get list of archived years
+router.get('/arsip/years', authenticateToken, (req, res) => {
+  try {
+    const archiveBaseDir = path.join(__dirname, '..', 'arsip');
+    
+    if (!fs.existsSync(archiveBaseDir)) {
+      return res.json({ success: true, years: [] });
+    }
+    
+    const years = fs.readdirSync(archiveBaseDir)
+      .filter(item => {
+        const itemPath = path.join(archiveBaseDir, item);
+        return fs.statSync(itemPath).isDirectory();
+      })
+      .sort((a, b) => b.localeCompare(a)); // Sort descending
+    
+    res.json({
+      success: true,
+      years: years
+    });
+    
+  } catch (error) {
+    console.error('Get years error:', error);
+    res.status(500).json({ 
+      error: 'Gagal mengambil data arsip',
+      message: error.message 
+    });
+  }
+});
+
+// Get files in specific year
+router.get('/arsip/:year', authenticateToken, (req, res) => {
+  try {
+    const { year } = req.params;
+    const yearDir = path.join(__dirname, '..', 'arsip', year);
+    
+    if (!fs.existsSync(yearDir)) {
+      return res.json({ success: true, files: [] });
+    }
+    
+    const files = fs.readdirSync(yearDir)
+      .filter(file => {
+        const ext = path.extname(file).toLowerCase();
+        return ['.xlsx', '.xls'].includes(ext);
+      })
+      .map(file => {
+        const filePath = path.join(yearDir, file);
+        const stats = fs.statSync(filePath);
+        return {
+          name: file,
+          size: stats.size,
+          uploadedAt: stats.mtime,
+          year: year
+        };
+      })
+      .sort((a, b) => b.uploadedAt - a.uploadedAt); // Sort by newest first
+    
+    res.json({
+      success: true,
+      year: year,
+      files: files
+    });
+    
+  } catch (error) {
+    console.error('Get files error:', error);
+    res.status(500).json({ 
+      error: 'Gagal mengambil data file',
+      message: error.message 
+    });
+  }
+});
+
+// Download archived file
+router.get('/arsip/:year/:filename', authenticateToken, (req, res) => {
+  try {
+    const { year, filename } = req.params;
+    const filePath = path.join(__dirname, '..', 'arsip', year, filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ 
+        error: 'File tidak ditemukan' 
+      });
+    }
+    
+    res.download(filePath, filename, (err) => {
+      if (err) {
+        console.error('Download error:', err);
+        res.status(500).json({ 
+          error: 'Gagal mendownload file' 
+        });
+      }
+    });
+    
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ 
+      error: 'Gagal mendownload file',
       message: error.message 
     });
   }
