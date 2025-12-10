@@ -3,7 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { parseExcel } from '../utils/excelParser.js';
-import pool from '../config/database.js';
+import db from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,7 +14,6 @@ const router = express.Router();
 // Configure multer for file upload
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    // Use absolute path relative to this file to avoid cwd issues
     cb(null, path.join(__dirname, '..', 'uploads'));
   },
   filename: (req, file, cb) => {
@@ -58,20 +57,24 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
       });
     }
 
-    // Insert data into database
+    // Prepare statement untuk insert
+    const insertStmt = db.prepare(`
+      INSERT INTO peserta (
+        no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+        materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
+        sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
     let successCount = 0;
     let errorCount = 0;
     const errors = [];
 
-    for (const row of data) {
-      try {
-        await pool.execute(
-          `INSERT INTO peserta (
-            no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
-            materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
-            sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
+    // Use transaction untuk performa lebih baik
+    const insertMany = db.transaction((rows) => {
+      for (const row of rows) {
+        try {
+          insertStmt.run(
             row.no || null,
             row.nama_peserta || '',
             row.nama_perusahaan || '',
@@ -84,17 +87,20 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
             row.sertifikat_dari_kso || '',
             row.sertifikat_diterima_kandel || '',
             row.sertifikat_diterima_peserta || ''
-          ]
-        );
-        successCount++;
-      } catch (err) {
-        errorCount++;
-        errors.push({
-          row: row.no || 'unknown',
-          error: err.message
-        });
+          );
+          successCount++;
+        } catch (err) {
+          errorCount++;
+          errors.push({
+            row: row.no || 'unknown',
+            error: err.message
+          });
+        }
       }
-    }
+    });
+
+    // Execute transaction
+    insertMany(data);
 
     res.json({
       success: true,

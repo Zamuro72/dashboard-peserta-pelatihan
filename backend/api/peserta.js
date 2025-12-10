@@ -1,5 +1,5 @@
 import express from 'express';
-import pool from '../config/database.js';
+import db from '../config/database.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -11,7 +11,7 @@ router.get('/', authenticateToken, async (req, res) => {
     let query = 'SELECT * FROM peserta WHERE 1=1';
     const params = [];
 
-    // Filter berdasarkan tipe sertifikat (BNSP atau Kemnaker)
+    // Filter berdasarkan tipe sertifikat
     if (filter === 'bnsp') {
       query += ' AND materi_skema LIKE ?';
       params.push('%BNSP%');
@@ -20,7 +20,7 @@ router.get('/', authenticateToken, async (req, res) => {
       params.push('%Kemnaker%', '%KEMNAKER%');
     }
 
-    // Search berdasarkan nama, perusahaan, materi, atau kso
+    // Search
     if (search) {
       query += ` AND (
         nama_peserta LIKE ? OR 
@@ -34,7 +34,7 @@ router.get('/', authenticateToken, async (req, res) => {
 
     query += ' ORDER BY no ASC';
 
-    const [rows] = await pool.execute(query, params);
+    const rows = db.prepare(query).all(...params);
 
     res.json({
       success: true,
@@ -55,13 +55,9 @@ router.get('/', authenticateToken, async (req, res) => {
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const row = db.prepare('SELECT * FROM peserta WHERE id = ?').get(id);
 
-    const [rows] = await pool.execute(
-      'SELECT * FROM peserta WHERE id = ?',
-      [id]
-    );
-
-    if (rows.length === 0) {
+    if (!row) {
       return res.status(404).json({ 
         error: 'Peserta tidak ditemukan' 
       });
@@ -69,7 +65,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 
     res.json({
       success: true,
-      data: rows[0]
+      data: row
     });
 
   } catch (error) {
@@ -85,37 +81,27 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const {
-      no,
-      nama_peserta,
-      nama_perusahaan,
-      pelatihan,
-      ujikom_praktek,
-      materi_skema,
-      kso_lsp,
-      skl_sertifikat,
-      tanggal_invoice,
-      sertifikat_dari_kso,
-      sertifikat_diterima_kandel,
-      sertifikat_diterima_peserta
+      no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+      materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
+      sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
     } = req.body;
 
-    const [result] = await pool.execute(
-      `INSERT INTO peserta (
+    const result = db.prepare(`
+      INSERT INTO peserta (
         no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
         materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
         sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
-        materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
-        sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
-      ]
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+      materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
+      sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
     );
 
     res.status(201).json({
       success: true,
       message: 'Peserta berhasil ditambahkan',
-      id: result.insertId
+      id: result.lastInsertRowid
     });
 
   } catch (error) {
@@ -132,36 +118,27 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      no,
-      nama_peserta,
-      nama_perusahaan,
-      pelatihan,
-      ujikom_praktek,
-      materi_skema,
-      kso_lsp,
-      skl_sertifikat,
-      tanggal_invoice,
-      sertifikat_dari_kso,
-      sertifikat_diterima_kandel,
-      sertifikat_diterima_peserta
+      no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+      materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
+      sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
     } = req.body;
 
-    const [result] = await pool.execute(
-      `UPDATE peserta SET
+    const result = db.prepare(`
+      UPDATE peserta SET
         no = ?, nama_peserta = ?, nama_perusahaan = ?, pelatihan = ?,
         ujikom_praktek = ?, materi_skema = ?, kso_lsp = ?, skl_sertifikat = ?,
         tanggal_invoice = ?, sertifikat_dari_kso = ?, 
-        sertifikat_diterima_kandel = ?, sertifikat_diterima_peserta = ?
-      WHERE id = ?`,
-      [
-        no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
-        materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
-        sertifikat_dari_kso, sertifikat_diterima_kandel, 
-        sertifikat_diterima_peserta, id
-      ]
+        sertifikat_diterima_kandel = ?, sertifikat_diterima_peserta = ?,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(
+      no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+      materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
+      sertifikat_dari_kso, sertifikat_diterima_kandel, 
+      sertifikat_diterima_peserta, id
     );
 
-    if (result.affectedRows === 0) {
+    if (result.changes === 0) {
       return res.status(404).json({ 
         error: 'Peserta tidak ditemukan' 
       });
@@ -186,12 +163,9 @@ router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [result] = await pool.execute(
-      'DELETE FROM peserta WHERE id = ?',
-      [id]
-    );
+    const result = db.prepare('DELETE FROM peserta WHERE id = ?').run(id);
 
-    if (result.affectedRows === 0) {
+    if (result.changes === 0) {
       return res.status(404).json({ 
         error: 'Peserta tidak ditemukan' 
       });
@@ -214,24 +188,16 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // Get statistics
 router.get('/stats/summary', authenticateToken, async (req, res) => {
   try {
-    const [total] = await pool.execute(
-      'SELECT COUNT(*) as total FROM peserta'
-    );
-
-    const [bnsp] = await pool.execute(
-      "SELECT COUNT(*) as total FROM peserta WHERE materi_skema LIKE '%BNSP%'"
-    );
-
-    const [kemnaker] = await pool.execute(
-      "SELECT COUNT(*) as total FROM peserta WHERE materi_skema LIKE '%Kemnaker%' OR materi_skema LIKE '%KEMNAKER%'"
-    );
+    const total = db.prepare('SELECT COUNT(*) as total FROM peserta').get();
+    const bnsp = db.prepare("SELECT COUNT(*) as total FROM peserta WHERE materi_skema LIKE '%BNSP%'").get();
+    const kemnaker = db.prepare("SELECT COUNT(*) as total FROM peserta WHERE materi_skema LIKE '%Kemnaker%' OR materi_skema LIKE '%KEMNAKER%'").get();
 
     res.json({
       success: true,
       stats: {
-        total: total[0].total,
-        bnsp: bnsp[0].total,
-        kemnaker: kemnaker[0].total
+        total: total.total,
+        bnsp: bnsp.total,
+        kemnaker: kemnaker.total
       }
     });
 

@@ -1,6 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import pool from '../config/database.js';
+import db from '../config/database.js';
 
 const router = express.Router();
 
@@ -16,18 +16,13 @@ router.post('/login', async (req, res) => {
     }
 
     // Query user from database
-    const [rows] = await pool.execute(
-      'SELECT * FROM users WHERE username = ? AND password = ?',
-      [username, password]
-    );
+    const user = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?').get(username, password);
 
-    if (rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ 
         error: 'Username atau password salah' 
       });
     }
-
-    const user = rows[0];
 
     // Generate JWT token
     const token = jwt.sign(
@@ -82,7 +77,7 @@ router.get('/verify', async (req, res) => {
   }
 });
 
-// Logout endpoint (optional - for clearing session)
+// Logout endpoint
 router.post('/logout', (req, res) => {
   res.json({
     success: true,
