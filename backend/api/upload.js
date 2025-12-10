@@ -283,6 +283,42 @@ router.get('/arsip/:year/:filename', authenticateToken, (req, res) => {
   }
 });
 
+// Delete archived file
+router.delete('/arsip/:year/:filename', authenticateToken, (req, res) => {
+  try {
+    const { year, filename } = req.params;
+    const filePath = path.join(__dirname, '..', 'arsip', year, filename);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ 
+        error: 'File tidak ditemukan' 
+      });
+    }
+    
+    // Delete file
+    fs.unlinkSync(filePath);
+    
+    // Check if folder is empty, delete folder too
+    const yearDir = path.join(__dirname, '..', 'arsip', year);
+    const remainingFiles = fs.readdirSync(yearDir);
+    if (remainingFiles.length === 0) {
+      fs.rmdirSync(yearDir);
+    }
+    
+    res.json({
+      success: true,
+      message: 'File berhasil dihapus'
+    });
+    
+  } catch (error) {
+    console.error('Delete file error:', error);
+    res.status(500).json({ 
+      error: 'Gagal menghapus file',
+      message: error.message 
+    });
+  }
+});
+
 // Download template Excel (optional)
 router.get('/template', (req, res) => {
   const templatePath = path.join(__dirname, '../templates/template_peserta.xlsx');

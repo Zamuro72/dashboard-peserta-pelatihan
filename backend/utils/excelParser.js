@@ -40,22 +40,64 @@ export const parseExcel = (filePath) => {
       const headers = rawData[headerRowIndex];
       const dataRows = rawData.slice(headerRowIndex + 1);
 
-      // Create column mapping
+      // Create column mapping dengan prioritas yang lebih spesifik
       const colMap = {};
       headers.forEach((header, index) => {
         const h = header.toString().toLowerCase().trim();
-        if (h.includes('no')) colMap.no = index;
+        
+        // No urut
+        if (h === 'no' || h === 'no.') colMap.no = index;
+        
+        // Nama peserta
         if (h.includes('nama') && h.includes('peserta')) colMap.nama_peserta = index;
-        if (h.includes('perusahaan')) colMap.nama_perusahaan = index;
-        if (h.includes('pelatihan') && !h.includes('peserta')) colMap.pelatihan = index;
-        if (h.includes('ujikom') || h.includes('praktek')) colMap.ujikom_praktek = index;
-        if (h.includes('materi') || h.includes('skema')) colMap.materi_skema = index;
-        if (h.includes('kso') || h.includes('lsp')) colMap.kso_lsp = index;
-        if (h.includes('skl') || h.includes('sertifikat')) colMap.skl_sertifikat = index;
-        if (h.includes('tanggal') && h.includes('invoice')) colMap.tanggal_invoice = index;
-        if (h.includes('dari') && h.includes('kso')) colMap.sertifikat_dari_kso = index;
-        if (h.includes('kandel')) colMap.sertifikat_diterima_kandel = index;
-        if (h.includes('diterima') && h.includes('peserta')) colMap.sertifikat_diterima_peserta = index;
+        
+        // Nama perusahaan
+        if (h.includes('nama') && h.includes('perusahaan')) colMap.nama_perusahaan = index;
+        
+        // Pelatihan (harus exact match atau sangat spesifik)
+        if ((h === 'pelatihan' || h.includes('tanggal pelatihan')) && !h.includes('peserta')) {
+          colMap.pelatihan = index;
+        }
+        
+        // Ujikom/Praktek
+        if (h.includes('ujikom') || (h.includes('uji') && h.includes('praktek'))) {
+          colMap.ujikom_praktek = index;
+        }
+        
+        // Materi/Skema
+        if (h.includes('materi') || h.includes('skema')) {
+          colMap.materi_skema = index;
+        }
+        
+        // KSO/LSP (prioritas tinggi, harus spesifik)
+        if ((h.includes('kso') || h.includes('lsp')) && !h.includes('dari') && !h.includes('sertifikat')) {
+          colMap.kso_lsp = index;
+        }
+        
+        // SKL/E-sertifikat
+        if ((h.includes('skl') || (h.includes('e-') && h.includes('sertifikat'))) && !h.includes('dari') && !h.includes('diterima')) {
+          colMap.skl_sertifikat = index;
+        }
+        
+        // Tanggal Invoice
+        if (h.includes('tanggal') && h.includes('invoice')) {
+          colMap.tanggal_invoice = index;
+        }
+        
+        // Sertifikat diberikan dari KSO/LSP
+        if (h.includes('sertifikat') && h.includes('dari') && (h.includes('kso') || h.includes('lsp'))) {
+          colMap.sertifikat_dari_kso = index;
+        }
+        
+        // Sertifikat diterima Kandel
+        if (h.includes('sertifikat') && h.includes('diterima') && h.includes('kandel')) {
+          colMap.sertifikat_diterima_kandel = index;
+        }
+        
+        // Sertifikat diterima peserta
+        if (h.includes('sertifikat') && h.includes('diterima') && h.includes('peserta') && h.includes('pelatihan')) {
+          colMap.sertifikat_diterima_peserta = index;
+        }
       });
 
       // Process data with merged cells handling
@@ -92,6 +134,18 @@ export const parseExcel = (filePath) => {
           } else if (value && value.toString().trim() !== '') {
             // Store non-empty value for future merged cells
             lastValues[field] = value;
+          }
+
+          // Normalize SKL value (v = ✓, x = ✗)
+          if (field === 'skl_sertifikat') {
+            const normalized = value.toLowerCase().trim();
+            if (normalized === 'v') {
+              value = 'v';
+            } else if (normalized === 'x') {
+              value = 'x';
+            } else {
+              value = '';
+            }
           }
 
           rowData[field] = value ? value.toString().trim() : '';

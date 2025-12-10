@@ -209,9 +209,14 @@
 											{{ formatDate(file.uploadedAt) }}
 										</div>
 									</div>
-									<button @click="downloadFile(file)" class="download-btn-small">
-										<Download :size="18" />
-									</button>
+									<div class="file-actions">
+										<button @click="downloadFile(file)" class="action-btn download-btn-icon" title="Download">
+											<Download :size="18" />
+										</button>
+										<button @click="confirmDeleteFile(file)" class="action-btn delete-btn-icon" title="Hapus">
+											<Trash2 :size="18" />
+										</button>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -412,6 +417,28 @@ const downloadFile = async (file) => {
 	} catch (error) {
 		console.error('Error downloading file:', error)
 		alert('Gagal mendownload file')
+	}
+}
+
+const confirmDeleteFile = (file) => {
+	if (confirm(`Hapus file "${file.name}"?\n\nTindakan ini tidak dapat dibatalkan!`)) {
+		deleteFile(file)
+	}
+}
+
+const deleteFile = async (file) => {
+	try {
+		await api.deleteArsipFile(file.year, file.name)
+		alert('File berhasil dihapus')
+		
+		// Refresh files list
+		await selectYear(selectedYear.value)
+		
+		// Refresh years list if folder is empty
+		await fetchArsipYears()
+	} catch (error) {
+		console.error('Error deleting file:', error)
+		alert('Gagal menghapus file')
 	}
 }
 
@@ -879,9 +906,12 @@ td {
 	color: #6b7280;
 }
 
-.download-btn-small {
-	background-color: #2563eb;
-	color: white;
+.file-actions {
+	display: flex;
+	gap: 0.5rem;
+}
+
+.action-btn {
 	border: none;
 	padding: 0.5rem;
 	border-radius: 0.375rem;
@@ -891,8 +921,22 @@ td {
 	transition: background-color 0.2s;
 }
 
-.download-btn-small:hover {
+.download-btn-icon {
+	background-color: #2563eb;
+	color: white;
+}
+
+.download-btn-icon:hover {
 	background-color: #1d4ed8;
+}
+
+.delete-btn-icon {
+	background-color: #dc2626;
+	color: white;
+}
+
+.delete-btn-icon:hover {
+	background-color: #b91c1c;
 }
 
 /* Delete Modal */

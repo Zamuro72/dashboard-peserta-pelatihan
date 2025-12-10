@@ -131,6 +131,11 @@ const api = {
     link.remove();
     window.URL.revokeObjectURL(url);
   },
+
+  deleteArsipFile: async (year, filename) => {
+    const response = await apiClient.delete(`/upload/arsip/${year}/${filename}`);
+    return response.data;
+  },
 };
 
 export default api;
