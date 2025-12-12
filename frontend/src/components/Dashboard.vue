@@ -182,6 +182,10 @@
 									<th>Materi/Skema</th>
 									<th>KSO/LSP</th>
 									<th>SKL</th>
+									<th>Tanggal Invoice</th>
+									<th>Sertifikat dari KSO/LSP</th>
+									<th>Sertifikat diterima oleh Kandel</th>
+									<th>Sertifikat diterima peserta</th>
 								</tr>
 							</thead>
 							<tbody>
@@ -214,6 +218,10 @@
 									<td class="text-center">
 										{{ item.skl_sertifikat === 'v' ? '✓' : item.skl_sertifikat === 'x' ? '✗' : '' }}
 									</td>
+									<td>{{ item.tanggal_invoice }}</td>
+									<td>{{ item.sertifikat_dari_kso }}</td>
+									<td>{{ item.sertifikat_diterima_kandel }}</td>
+									<td>{{ item.sertifikat_diterima_peserta }}</td>
 								</tr>
 							</tbody>
 						</table>
@@ -901,11 +909,31 @@ const formatDate = (date) => {
 
 .table-wrapper {
 	overflow-x: auto;
+	position: relative;
+}
+
+.table-wrapper::-webkit-scrollbar {
+	height: 10px;
+}
+
+.table-wrapper::-webkit-scrollbar-track {
+	background: #f1f1f1;
+	border-radius: 5px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb {
+	background: #888;
+	border-radius: 5px;
+}
+
+.table-wrapper::-webkit-scrollbar-thumb:hover {
+	background: #555;
 }
 
 table {
 	width: 100%;
 	border-collapse: collapse;
+	min-width: 1400px;
 }
 
 thead {
@@ -920,6 +948,11 @@ th {
 	font-weight: 500;
 	color: #374151;
 	text-transform: uppercase;
+	white-space: nowrap;
+	background-color: #f9fafb;
+	position: sticky;
+	top: 0;
+	z-index: 1;
 }
 
 .checkbox-col {
@@ -949,6 +982,12 @@ tbody tr.row-selected {
 td {
 	padding: 0.75rem 1rem;
 	font-size: 0.875rem;
+	white-space: nowrap;
+}
+
+td.badge-cell {
+	white-space: normal;
+	min-width: 200px;
 }
 
 .font-medium { font-weight: 500; }

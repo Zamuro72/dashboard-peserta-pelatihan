@@ -38,6 +38,7 @@ const initTables = () => {
     db.exec(`
       CREATE TABLE IF NOT EXISTS peserta (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        arsip_id INTEGER,
         no INTEGER,
         nama_peserta TEXT,
         nama_perusahaan TEXT,
@@ -51,7 +52,22 @@ const initTables = () => {
         sertifikat_diterima_kandel TEXT,
         sertifikat_diterima_peserta TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (arsip_id) REFERENCES arsip(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Tabel arsip untuk menyimpan file Excel
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS arsip (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        filename TEXT NOT NULL,
+        original_name TEXT NOT NULL,
+        file_data BLOB NOT NULL,
+        file_size INTEGER NOT NULL,
+        mime_type TEXT NOT NULL,
+        year TEXT NOT NULL,
+        uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
@@ -71,30 +87,5 @@ const initTables = () => {
 
 // Jalankan inisialisasi
 initTables();
-
-// Helper functions untuk query
-export const query = (sql, params = []) => {
-  try {
-    const stmt = db.prepare(sql);
-    if (sql.trim().toUpperCase().startsWith('SELECT')) {
-      return [stmt.all(...params), null];
-    } else {
-      const result = stmt.run(...params);
-      return [result, null];
-    }
-  } catch (error) {
-    return [null, error];
-  }
-};
-
-export const execute = (sql, params = []) => {
-  try {
-    const stmt = db.prepare(sql);
-    const result = stmt.run(...params);
-    return [result, null];
-  } catch (error) {
-    return [null, error];
-  }
-};
 
 export default db;
