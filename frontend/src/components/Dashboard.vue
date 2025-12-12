@@ -8,9 +8,9 @@
 					<h1>Dashboard Peserta Pelatihan</h1>
 				</div>
 				<div class="header-actions">
-					<button @click="showArsipModal = true" class="arsip-btn">
-						<Archive :size="18" />
-						Arsip
+					<button @click="showUploadModal = true" class="upload-btn-header">
+						<Upload :size="18" />
+						Upload
 					</button>
 					<button @click="handleLogout" class="logout-btn">
 						<LogOut :size="18" />
@@ -22,133 +22,202 @@
 
 		<!-- Main Content -->
 		<div class="main-content">
-			<!-- Stats Cards -->
-			<div class="stats-grid">
-				<div class="stat-card">
-					<div class="stat-label">Total Peserta</div>
-					<div class="stat-value">{{ stats.total }}</div>
+			<!-- File Selection Area -->
+			<div class="file-selection-card">
+				<div class="selection-header">
+					<h2>📁 Pilih File Data</h2>
+					<p>Pilih tahun dan file untuk melihat data peserta</p>
 				</div>
-				<div class="stat-card stat-bnsp">
-					<div class="stat-label">BNSP</div>
-					<div class="stat-value">{{ stats.bnsp }}</div>
-				</div>
-				<div class="stat-card stat-kemnaker">
-					<div class="stat-label">Kemnaker RI</div>
-					<div class="stat-value">{{ stats.kemnaker }}</div>
-				</div>
-			</div>
 
-			<!-- Controls -->
-			<div class="controls-card">
-				<div class="controls-grid">
-					<!-- Search -->
-					<div class="search-box">
-						<Search class="icon-left" :size="20" />
-						<input
-							type="text"
-							v-model="searchTerm"
-							placeholder="Cari peserta, perusahaan, materi..."
-						/>
-					</div>
+				<div v-if="loadingYears" class="loading-selection">
+					Memuat data...
+				</div>
 
-					<!-- Filter -->
-					<div class="filter-box">
-						<Filter class="icon-left" :size="20" />
-						<select v-model="filterType">
-							<option value="all">Semua Sertifikat</option>
-							<option value="bnsp">BNSP</option>
-							<option value="kemnaker">Kemnaker RI</option>
+				<div v-else-if="arsipYears.length === 0" class="no-files-yet">
+					<FileSpreadsheet :size="48" />
+					<p>Belum ada file data</p>
+					<button @click="showUploadModal = true" class="upload-btn-large">
+						<Upload :size="20" />
+						Upload File Excel Pertama
+					</button>
+				</div>
+
+				<div v-else class="file-selection-content">
+					<!-- Year Selector -->
+					<div class="year-selector">
+						<label>Tahun:</label>
+						<select v-model="selectedYear" @change="onYearChange" class="year-select">
+							<option value="">-- Pilih Tahun --</option>
+							<option v-for="year in arsipYears" :key="year" :value="year">
+								{{ year }}
+							</option>
 						</select>
 					</div>
 
-					<!-- Upload Button -->
-					<button @click="showUploadModal = true" class="upload-btn">
-						<Upload :size="20" />
-						Upload Excel
-					</button>
-				</div>
-
-				<!-- Results Info & Delete Button -->
-				<div class="results-actions">
-					<div class="results-info">
-						Menampilkan {{ pesertaData.length }} peserta
-						<span v-if="selectedIds.length > 0" class="selected-count">
-							({{ selectedIds.length }} dipilih)
-						</span>
+					<!-- File List -->
+					<div v-if="selectedYear" class="file-list-section">
+						<div v-if="loadingFiles" class="loading-files-small">
+							Memuat file...
+						</div>
+						<div v-else-if="arsipFiles.length === 0" class="no-files-small">
+							Tidak ada file di tahun {{ selectedYear }}
+						</div>
+						<div v-else class="file-cards">
+							<div 
+								v-for="file in arsipFiles" 
+								:key="file.id" 
+								@click="selectFile(file)"
+								:class="['file-card', { active: selectedFileId === file.id }]"
+							>
+								<div class="file-card-icon">
+									<FileSpreadsheet :size="32" />
+								</div>
+								<div class="file-card-info">
+									<div class="file-card-name">{{ file.name }}</div>
+									<div class="file-card-meta">
+										<span>{{ file.pesertaCount }} peserta</span>
+										<span>{{ formatFileSize(file.size) }}</span>
+									</div>
+									<div class="file-card-date">{{ formatDate(file.uploadedAt) }}</div>
+								</div>
+								<div class="file-card-actions" @click.stop>
+									<button @click="downloadFile(file)" class="btn-icon" title="Download">
+										<Download :size="16" />
+									</button>
+									<button @click="confirmDeleteFile(file)" class="btn-icon btn-danger" title="Hapus">
+										<Trash2 :size="16" />
+									</button>
+								</div>
+							</div>
+						</div>
 					</div>
-					
-					<button 
-						v-if="selectedIds.length > 0"
-						@click="handleDeleteSelected"
-						class="delete-btn"
-					>
-						<Trash2 :size="18" />
-						Hapus ({{ selectedIds.length }})
-					</button>
 				</div>
 			</div>
 
-			<!-- Table -->
-			<div class="table-card">
-				<div v-if="loading" class="loading">Loading data...</div>
-				<div v-else-if="pesertaData.length === 0" class="no-data">
-					Tidak ada data peserta
+			<!-- Data Display Area (hanya muncul kalau ada file dipilih) -->
+			<div v-if="selectedFileId" class="data-section">
+				<!-- Stats Cards -->
+				<div class="stats-grid">
+					<div class="stat-card">
+						<div class="stat-label">Total Peserta</div>
+						<div class="stat-value">{{ stats.total }}</div>
+					</div>
+					<div class="stat-card stat-bnsp">
+						<div class="stat-label">BNSP</div>
+						<div class="stat-value">{{ stats.bnsp }}</div>
+					</div>
+					<div class="stat-card stat-kemnaker">
+						<div class="stat-label">Kemnaker RI</div>
+						<div class="stat-value">{{ stats.kemnaker }}</div>
+					</div>
 				</div>
-				<div v-else class="table-wrapper">
-					<table>
-						<thead>
-							<tr>
-								<th class="checkbox-col">
-									<input 
-										type="checkbox" 
-										:checked="isAllSelected"
-										@change="toggleSelectAll"
-										class="checkbox-input"
-									/>
-								</th>
-								<th>No</th>
-								<th>Nama Peserta</th>
-								<th>Perusahaan</th>
-								<th>Pelatihan</th>
-								<th>Ujikom/Praktek</th>
-								<th>Materi/Skema</th>
-								<th>KSO/LSP</th>
-								<th>SKL</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr v-for="item in pesertaData" :key="item.id" :class="{ 'row-selected': selectedIds.includes(item.id) }">
-								<td class="checkbox-col">
-									<input 
-										type="checkbox" 
-										:checked="selectedIds.includes(item.id)"
-										@change="toggleSelect(item.id)"
-										class="checkbox-input"
-									/>
-								</td>
-								<td>{{ item.no }}</td>
-								<td class="font-medium">{{ item.nama_peserta }}</td>
-								<td>{{ item.nama_perusahaan }}</td>
-								<td>{{ item.pelatihan }}</td>
-								<td>{{ item.ujikom_praktek }}</td>
-								<td>
-									<span
-										:class="[
-											'badge',
-											item.materi_skema?.includes('BNSP') ? 'badge-bnsp' :
-											item.materi_skema?.includes('Kemnaker') || item.materi_skema?.includes('KEMNAKER') ? 'badge-kemnaker' : 'badge-default'
-										]"
-									>
-										{{ item.materi_skema }}
-									</span>
-								</td>
-								<td>{{ item.kso_lsp }}</td>
-								<td class="text-center">
-									{{ item.skl_sertifikat === 'v' ? '✓' : item.skl_sertifikat === 'x' ? '✗' : '' }}
-								</td>
-							</tr>
-						</tbody>
-					</table>
+
+				<!-- Controls -->
+				<div class="controls-card">
+					<div class="controls-grid">
+						<!-- Search -->
+						<div class="search-box">
+							<Search class="icon-left" :size="20" />
+							<input
+								type="text"
+								v-model="searchTerm"
+								placeholder="Cari peserta, perusahaan, materi..."
+							/>
+						</div>
+
+						<!-- Filter -->
+						<div class="filter-box">
+							<Filter class="icon-left" :size="20" />
+							<select v-model="filterType">
+								<option value="all">Semua Sertifikat</option>
+								<option value="bnsp">BNSP</option>
+								<option value="kemnaker">Kemnaker RI</option>
+							</select>
+						</div>
+					</div>
+
+					<!-- Results Info & Delete Button -->
+					<div class="results-actions">
+						<div class="results-info">
+							Menampilkan {{ pesertaData.length }} peserta
+							<span v-if="selectedIds.length > 0" class="selected-count">
+								({{ selectedIds.length }} dipilih)
+							</span>
+						</div>
+						
+						<button 
+							v-if="selectedIds.length > 0"
+							@click="handleDeleteSelected"
+							class="delete-btn"
+						>
+							<Trash2 :size="18" />
+							Hapus ({{ selectedIds.length }})
+						</button>
+					</div>
+				</div>
+
+				<!-- Table -->
+				<div class="table-card">
+					<div v-if="loading" class="loading">Loading data...</div>
+					<div v-else-if="pesertaData.length === 0" class="no-data">
+						Tidak ada data peserta
+					</div>
+					<div v-else class="table-wrapper">
+						<table>
+							<thead>
+								<tr>
+									<th class="checkbox-col">
+										<input 
+											type="checkbox" 
+											:checked="isAllSelected"
+											@change="toggleSelectAll"
+											class="checkbox-input"
+										/>
+									</th>
+									<th>No</th>
+									<th>Nama Peserta</th>
+									<th>Perusahaan</th>
+									<th>Pelatihan</th>
+									<th>Ujikom/Praktek</th>
+									<th>Materi/Skema</th>
+									<th>KSO/LSP</th>
+									<th>SKL</th>
+								</tr>
+							</thead>
+							<tbody>
+								<tr v-for="item in pesertaData" :key="item.id" :class="{ 'row-selected': selectedIds.includes(item.id) }">
+									<td class="checkbox-col">
+										<input 
+											type="checkbox" 
+											:checked="selectedIds.includes(item.id)"
+											@change="toggleSelect(item.id)"
+											class="checkbox-input"
+										/>
+									</td>
+									<td>{{ item.no }}</td>
+									<td class="font-medium">{{ item.nama_peserta }}</td>
+									<td>{{ item.nama_perusahaan }}</td>
+									<td>{{ item.pelatihan }}</td>
+									<td>{{ item.ujikom_praktek }}</td>
+									<td>
+										<span
+											:class="[
+												'badge',
+												item.materi_skema?.includes('BNSP') ? 'badge-bnsp' :
+												item.materi_skema?.includes('Kemnaker') || item.materi_skema?.includes('KEMNAKER') ? 'badge-kemnaker' : 'badge-default'
+											]"
+										>
+											{{ item.materi_skema }}
+										</span>
+									</td>
+									<td>{{ item.kso_lsp }}</td>
+									<td class="text-center">
+										{{ item.skl_sertifikat === 'v' ? '✓' : item.skl_sertifikat === 'x' ? '✗' : '' }}
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -159,71 +228,6 @@
 			@close="showUploadModal = false"
 			@success="handleUploadSuccess"
 		/>
-
-		<!-- Arsip Modal -->
-		<div v-if="showArsipModal" class="modal-overlay" @click.self="showArsipModal = false">
-			<div class="modal-content arsip-modal">
-				<div class="modal-header">
-					<h2>Arsip File Excel</h2>
-					<button @click="showArsipModal = false" class="close-btn">
-						<X :size="24" />
-					</button>
-				</div>
-				<div class="modal-body">
-					<div v-if="loadingArsip" class="loading-arsip">
-						Memuat data arsip...
-					</div>
-					<div v-else-if="arsipYears.length === 0" class="no-arsip">
-						Belum ada file arsip
-					</div>
-					<div v-else class="arsip-content">
-						<!-- Year Tabs -->
-						<div class="year-tabs">
-							<button
-								v-for="year in arsipYears"
-								:key="year"
-								@click="selectYear(year)"
-								:class="['year-tab', { active: selectedYear === year }]"
-							>
-								{{ year }}
-							</button>
-						</div>
-
-						<!-- Files List -->
-						<div v-if="selectedYear" class="files-list">
-							<div v-if="loadingFiles" class="loading-files">
-								Memuat file...
-							</div>
-							<div v-else-if="arsipFiles.length === 0" class="no-files">
-								Tidak ada file di tahun {{ selectedYear }}
-							</div>
-							<div v-else class="file-items">
-								<div v-for="file in arsipFiles" :key="file.name" class="file-item">
-									<div class="file-icon">
-										<FileSpreadsheet :size="24" />
-									</div>
-									<div class="file-info">
-										<div class="file-name">{{ file.name }}</div>
-										<div class="file-meta">
-											{{ formatFileSize(file.size) }} • 
-											{{ formatDate(file.uploadedAt) }}
-										</div>
-									</div>
-									<div class="file-actions">
-										<button @click="downloadFile(file)" class="action-btn download-btn-icon" title="Download">
-											<Download :size="18" />
-										</button>
-										<button @click="confirmDeleteFile(file)" class="action-btn delete-btn-icon" title="Hapus">
-											<Trash2 :size="18" />
-										</button>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
 
 		<!-- Delete Confirmation Modal -->
 		<div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
@@ -250,31 +254,31 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
-import { Search, Upload, LogOut, Filter, Trash2, Archive, X, FileSpreadsheet, Download } from 'lucide-vue-next'
+import { Search, Upload, LogOut, Filter, Trash2, FileSpreadsheet, Download } from 'lucide-vue-next'
 import api from '../services/api'
 import UploadModal from './UploadModal.vue'
 
 const emit = defineEmits(['logout'])
 
 const pesertaData = ref([])
-const loading = ref(true)
+const loading = ref(false)
 const searchTerm = ref('')
 const filterType = ref('all')
 const showUploadModal = ref(false)
 const stats = ref({ total: 0, bnsp: 0, kemnaker: 0 })
 
+// File selection states
+const loadingYears = ref(true)
+const loadingFiles = ref(false)
+const arsipYears = ref([])
+const selectedYear = ref('')
+const arsipFiles = ref([])
+const selectedFileId = ref(null)
+
 // Delete states
 const selectedIds = ref([])
 const showDeleteModal = ref(false)
 const deleting = ref(false)
-
-// Arsip states
-const showArsipModal = ref(false)
-const loadingArsip = ref(false)
-const loadingFiles = ref(false)
-const arsipYears = ref([])
-const selectedYear = ref(null)
-const arsipFiles = ref([])
 
 // Computed
 const isAllSelected = computed(() => {
@@ -282,25 +286,64 @@ const isAllSelected = computed(() => {
 })
 
 onMounted(() => {
-	fetchPeserta()
-	fetchStats()
+	fetchArsipYears()
 })
 
 watch([searchTerm, filterType], () => {
-	fetchPeserta()
+	if (selectedFileId.value) {
+		fetchPeserta()
+	}
 	selectedIds.value = []
 })
 
-watch(showArsipModal, (newVal) => {
-	if (newVal) {
-		fetchArsipYears()
+const fetchArsipYears = async () => {
+	try {
+		loadingYears.value = true
+		const response = await api.getArsipYears()
+		arsipYears.value = response.years
+	} catch (error) {
+		console.error('Error fetching years:', error)
+		alert('Gagal memuat data arsip')
+	} finally {
+		loadingYears.value = false
 	}
-})
+}
+
+const onYearChange = async () => {
+	if (!selectedYear.value) {
+		arsipFiles.value = []
+		selectedFileId.value = null
+		pesertaData.value = []
+		return
+	}
+
+	try {
+		loadingFiles.value = true
+		selectedFileId.value = null
+		pesertaData.value = []
+		const response = await api.getArsipFiles(selectedYear.value)
+		arsipFiles.value = response.files
+	} catch (error) {
+		console.error('Error fetching files:', error)
+		alert('Gagal memuat file')
+	} finally {
+		loadingFiles.value = false
+	}
+}
+
+const selectFile = (file) => {
+	selectedFileId.value = file.id
+	fetchPeserta()
+	fetchStats()
+}
 
 const fetchPeserta = async () => {
+	if (!selectedFileId.value) return
+
 	try {
 		loading.value = true
 		const response = await api.getPeserta({
+			arsip_id: selectedFileId.value,
 			search: searchTerm.value,
 			filter: filterType.value
 		})
@@ -314,8 +357,10 @@ const fetchPeserta = async () => {
 }
 
 const fetchStats = async () => {
+	if (!selectedFileId.value) return
+
 	try {
-		const response = await api.getStats()
+		const response = await api.getStats(selectedFileId.value)
 		stats.value = response.stats
 	} catch (error) {
 		console.error('Error fetching stats:', error)
@@ -330,8 +375,12 @@ const handleLogout = () => {
 
 const handleUploadSuccess = () => {
 	showUploadModal.value = false
-	fetchPeserta()
-	fetchStats()
+	fetchArsipYears()
+	// Reset selections
+	selectedYear.value = ''
+	selectedFileId.value = null
+	arsipFiles.value = []
+	pesertaData.value = []
 }
 
 // Delete functions
@@ -379,41 +428,10 @@ const confirmDelete = async () => {
 	}
 }
 
-// Arsip functions
-const fetchArsipYears = async () => {
-	try {
-		loadingArsip.value = true
-		const response = await api.getArsipYears()
-		arsipYears.value = response.years
-		
-		if (arsipYears.value.length > 0) {
-			selectYear(arsipYears.value[0])
-		}
-	} catch (error) {
-		console.error('Error fetching arsip years:', error)
-		alert('Gagal memuat data arsip')
-	} finally {
-		loadingArsip.value = false
-	}
-}
-
-const selectYear = async (year) => {
-	try {
-		selectedYear.value = year
-		loadingFiles.value = true
-		const response = await api.getArsipFiles(year)
-		arsipFiles.value = response.files
-	} catch (error) {
-		console.error('Error fetching files:', error)
-		alert('Gagal memuat file arsip')
-	} finally {
-		loadingFiles.value = false
-	}
-}
-
+// File actions
 const downloadFile = async (file) => {
 	try {
-		await api.downloadArsipFile(file.year, file.name)
+		await api.downloadArsipFile(file.year, file.id)
 	} catch (error) {
 		console.error('Error downloading file:', error)
 		alert('Gagal mendownload file')
@@ -421,20 +439,24 @@ const downloadFile = async (file) => {
 }
 
 const confirmDeleteFile = (file) => {
-	if (confirm(`Hapus file "${file.name}"?\n\nTindakan ini tidak dapat dibatalkan!`)) {
+	if (confirm(`Hapus file "${file.name}"?\n\nSemua data peserta (${file.pesertaCount}) dari file ini akan ikut terhapus!\n\nTindakan ini tidak dapat dibatalkan!`)) {
 		deleteFile(file)
 	}
 }
 
 const deleteFile = async (file) => {
 	try {
-		await api.deleteArsipFile(file.year, file.name)
-		alert('File berhasil dihapus')
+		await api.deleteArsipFile(file.year, file.id)
+		alert('File dan data peserta berhasil dihapus')
 		
-		// Refresh files list
-		await selectYear(selectedYear.value)
+		// Reset if deleted file was selected
+		if (selectedFileId.value === file.id) {
+			selectedFileId.value = null
+			pesertaData.value = []
+		}
 		
-		// Refresh years list if folder is empty
+		// Refresh
+		await onYearChange()
 		await fetchArsipYears()
 	} catch (error) {
 		console.error('Error deleting file:', error)
@@ -470,6 +492,9 @@ const formatDate = (date) => {
 .header {
 	background-color: white;
 	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	position: sticky;
+	top: 0;
+	z-index: 10;
 }
 
 .header-content {
@@ -490,7 +515,6 @@ const formatDate = (date) => {
 .dashboard-logo {
 	height: 40px;
 	width: auto;
-	display: block;
 }
 
 .header h1 {
@@ -504,11 +528,11 @@ const formatDate = (date) => {
 	gap: 0.75rem;
 }
 
-.arsip-btn {
+.upload-btn-header {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	background-color: #2563eb;
+	background-color: #16a34a;
 	color: white;
 	padding: 0.5rem 1rem;
 	border-radius: 0.5rem;
@@ -519,8 +543,8 @@ const formatDate = (date) => {
 	transition: background-color 0.2s;
 }
 
-.arsip-btn:hover {
-	background-color: #1d4ed8;
+.upload-btn-header:hover {
+	background-color: #15803d;
 }
 
 .logout-btn {
@@ -546,6 +570,206 @@ const formatDate = (date) => {
 	max-width: 80rem;
 	margin: 0 auto;
 	padding: 1.5rem;
+}
+
+/* File Selection Card */
+.file-selection-card {
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	padding: 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.selection-header {
+	margin-bottom: 1.5rem;
+}
+
+.selection-header h2 {
+	font-size: 1.25rem;
+	font-weight: bold;
+	color: #1f2937;
+	margin-bottom: 0.25rem;
+}
+
+.selection-header p {
+	color: #6b7280;
+	font-size: 0.875rem;
+}
+
+.loading-selection {
+	text-align: center;
+	padding: 2rem;
+	color: #6b7280;
+}
+
+.no-files-yet {
+	text-align: center;
+	padding: 3rem 1rem;
+	color: #6b7280;
+}
+
+.no-files-yet svg {
+	margin: 0 auto 1rem;
+	color: #9ca3af;
+}
+
+.no-files-yet p {
+	margin-bottom: 1.5rem;
+	font-size: 1rem;
+}
+
+.upload-btn-large {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	background-color: #16a34a;
+	color: white;
+	padding: 0.75rem 1.5rem;
+	border-radius: 0.5rem;
+	border: none;
+	cursor: pointer;
+	font-size: 1rem;
+	font-weight: 500;
+	transition: background-color 0.2s;
+}
+
+.upload-btn-large:hover {
+	background-color: #15803d;
+}
+
+.file-selection-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.year-selector {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.year-selector label {
+	font-weight: 500;
+	color: #374151;
+}
+
+.year-select {
+	padding: 0.5rem 1rem;
+	border: 1px solid #d1d5db;
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	min-width: 150px;
+	cursor: pointer;
+}
+
+.loading-files-small,
+.no-files-small {
+	text-align: center;
+	padding: 1rem;
+	color: #6b7280;
+	font-size: 0.875rem;
+}
+
+.file-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1rem;
+}
+
+.file-card {
+	display: flex;
+	align-items: flex-start;
+	gap: 1rem;
+	padding: 1rem;
+	border: 2px solid #e5e7eb;
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.file-card:hover {
+	border-color: #2563eb;
+	background-color: #f9fafb;
+}
+
+.file-card.active {
+	border-color: #2563eb;
+	background-color: #eff6ff;
+}
+
+.file-card-icon {
+	color: #16a34a;
+	flex-shrink: 0;
+}
+
+.file-card-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.file-card-name {
+	font-weight: 500;
+	color: #1f2937;
+	margin-bottom: 0.25rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.file-card-meta {
+	display: flex;
+	gap: 0.75rem;
+	font-size: 0.75rem;
+	color: #2563eb;
+	font-weight: 500;
+	margin-bottom: 0.25rem;
+}
+
+.file-card-date {
+	font-size: 0.75rem;
+	color: #6b7280;
+}
+
+.file-card-actions {
+	display: flex;
+	gap: 0.25rem;
+	flex-shrink: 0;
+}
+
+.btn-icon {
+	padding: 0.375rem;
+	border: none;
+	border-radius: 0.375rem;
+	background-color: #f3f4f6;
+	color: #374151;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	transition: background-color 0.2s;
+}
+
+.btn-icon:hover {
+	background-color: #e5e7eb;
+}
+
+.btn-danger {
+	color: #dc2626;
+}
+
+.btn-danger:hover {
+	background-color: #fee2e2;
+}
+
+/* Data Section */
+.data-section {
+	animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(10px); }
+	to { opacity: 1; transform: translateY(0); }
 }
 
 .stats-grid {
@@ -623,26 +847,6 @@ const formatDate = (date) => {
 .filter-box select {
 	cursor: pointer;
 	background-color: white;
-}
-
-.upload-btn {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.5rem;
-	background-color: #16a34a;
-	color: white;
-	padding: 0.5rem 1rem;
-	border-radius: 0.5rem;
-	border: none;
-	cursor: pointer;
-	font-size: 0.875rem;
-	font-weight: 500;
-	transition: background-color 0.2s;
-}
-
-.upload-btn:hover {
-	background-color: #15803d;
 }
 
 .results-actions {
@@ -780,166 +984,21 @@ td {
 	max-width: 28rem;
 }
 
-.arsip-modal {
-	max-width: 48rem;
-	max-height: 90vh;
-	display: flex;
-	flex-direction: column;
-}
-
-.modal-header {
+.delete-modal .modal-header {
 	padding: 1.5rem;
 	border-bottom: 1px solid #e5e7eb;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
 }
 
-.modal-header h2 {
+.delete-modal .modal-header h2 {
 	font-size: 1.25rem;
 	font-weight: bold;
 	color: #1f2937;
 }
 
-.close-btn {
-	background: none;
-	border: none;
-	cursor: pointer;
-	color: #6b7280;
-	padding: 0.25rem;
-	display: flex;
-	transition: color 0.2s;
-}
-
-.close-btn:hover {
-	color: #1f2937;
-}
-
-.modal-body {
+.delete-modal .modal-body {
 	padding: 1.5rem;
-	overflow-y: auto;
-	flex: 1;
 }
 
-.loading-arsip,
-.no-arsip {
-	text-align: center;
-	padding: 2rem;
-	color: #6b7280;
-}
-
-.year-tabs {
-	display: flex;
-	gap: 0.5rem;
-	margin-bottom: 1.5rem;
-	flex-wrap: wrap;
-}
-
-.year-tab {
-	padding: 0.5rem 1rem;
-	border: 1px solid #d1d5db;
-	border-radius: 0.5rem;
-	background-color: white;
-	cursor: pointer;
-	font-size: 0.875rem;
-	font-weight: 500;
-	color: #374151;
-	transition: all 0.2s;
-}
-
-.year-tab:hover {
-	background-color: #f9fafb;
-}
-
-.year-tab.active {
-	background-color: #2563eb;
-	color: white;
-	border-color: #2563eb;
-}
-
-.loading-files,
-.no-files {
-	text-align: center;
-	padding: 2rem;
-	color: #6b7280;
-	font-size: 0.875rem;
-}
-
-.file-items {
-	display: flex;
-	flex-direction: column;
-	gap: 0.75rem;
-}
-
-.file-item {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-	padding: 1rem;
-	border: 1px solid #e5e7eb;
-	border-radius: 0.5rem;
-	transition: background-color 0.2s;
-}
-
-.file-item:hover {
-	background-color: #f9fafb;
-}
-
-.file-icon {
-	color: #16a34a;
-	flex-shrink: 0;
-}
-
-.file-info {
-	flex: 1;
-}
-
-.file-name {
-	font-size: 0.875rem;
-	font-weight: 500;
-	color: #1f2937;
-	margin-bottom: 0.25rem;
-}
-
-.file-meta {
-	font-size: 0.75rem;
-	color: #6b7280;
-}
-
-.file-actions {
-	display: flex;
-	gap: 0.5rem;
-}
-
-.action-btn {
-	border: none;
-	padding: 0.5rem;
-	border-radius: 0.375rem;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	transition: background-color 0.2s;
-}
-
-.download-btn-icon {
-	background-color: #2563eb;
-	color: white;
-}
-
-.download-btn-icon:hover {
-	background-color: #1d4ed8;
-}
-
-.delete-btn-icon {
-	background-color: #dc2626;
-	color: white;
-}
-
-.delete-btn-icon:hover {
-	background-color: #b91c1c;
-}
-
-/* Delete Modal */
 .delete-modal .modal-body p {
 	margin: 0.5rem 0;
 	color: #374151;

@@ -7,9 +7,23 @@ const router = express.Router();
 // Get all peserta dengan filter dan search
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { search, filter } = req.query;
+    const { search, filter, arsip_id } = req.query;
     let query = 'SELECT * FROM peserta WHERE 1=1';
     const params = [];
+
+    // Filter by arsip_id (REQUIRED)
+    if (arsip_id) {
+      query += ' AND arsip_id = ?';
+      params.push(arsip_id);
+    } else {
+      // Jika tidak ada arsip_id, return empty
+      return res.json({
+        success: true,
+        data: [],
+        count: 0,
+        message: 'Pilih file arsip terlebih dahulu'
+      });
+    }
 
     // Filter berdasarkan tipe sertifikat
     if (filter === 'bnsp') {
@@ -188,9 +202,18 @@ router.delete('/:id', authenticateToken, async (req, res) => {
 // Get statistics
 router.get('/stats/summary', authenticateToken, async (req, res) => {
   try {
-    const total = db.prepare('SELECT COUNT(*) as total FROM peserta').get();
-    const bnsp = db.prepare("SELECT COUNT(*) as total FROM peserta WHERE materi_skema LIKE '%BNSP%'").get();
-    const kemnaker = db.prepare("SELECT COUNT(*) as total FROM peserta WHERE materi_skema LIKE '%Kemnaker%' OR materi_skema LIKE '%KEMNAKER%'").get();
+    const { arsip_id } = req.query;
+
+    if (!arsip_id) {
+      return res.json({
+        success: true,
+        stats: { total: 0, bnsp: 0, kemnaker: 0 }
+      });
+    }
+
+    const total = db.prepare('SELECT COUNT(*) as total FROM peserta WHERE arsip_id = ?').get(arsip_id);
+    const bnsp = db.prepare("SELECT COUNT(*) as total FROM peserta WHERE arsip_id = ? AND materi_skema LIKE '%BNSP%'").get(arsip_id);
+    const kemnaker = db.prepare("SELECT COUNT(*) as total FROM peserta WHERE arsip_id = ? AND (materi_skema LIKE '%Kemnaker%' OR materi_skema LIKE '%KEMNAKER%')").get(arsip_id);
 
     res.json({
       success: true,

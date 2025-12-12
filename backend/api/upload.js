@@ -40,40 +40,6 @@ const upload = multer({
   }
 });
 
-// Create archive directory structure
-const createArchiveDir = (year) => {
-  const archiveBaseDir = path.join(__dirname, '..', 'arsip');
-  const yearDir = path.join(archiveBaseDir, year);
-  
-  if (!fs.existsSync(archiveBaseDir)) {
-    fs.mkdirSync(archiveBaseDir, { recursive: true });
-  }
-  
-  if (!fs.existsSync(yearDir)) {
-    fs.mkdirSync(yearDir, { recursive: true });
-  }
-  
-  return yearDir;
-};
-
-// Move file to archive
-const moveToArchive = (sourceFile, year, originalName) => {
-  const yearDir = createArchiveDir(year);
-  const timestamp = Date.now();
-  const ext = path.extname(originalName);
-  const baseName = path.basename(originalName, ext);
-  const archiveFileName = `${baseName}-${timestamp}${ext}`;
-  const destPath = path.join(yearDir, archiveFileName);
-  
-  fs.copyFileSync(sourceFile, destPath);
-  
-  return {
-    path: destPath,
-    fileName: archiveFileName,
-    year: year
-  };
-};
-
 // Upload Excel file
 router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
   try {
@@ -100,16 +66,32 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
     const firstRow = data[0];
     const year = extractYearFromPelatihan(firstRow.pelatihan, firstRow.ujikom_praktek);
 
-    // Move file to archive before processing
-    const archiveInfo = moveToArchive(req.file.path, year, req.file.originalname);
+    // Read file as buffer to save in database
+    const fileBuffer = fs.readFileSync(req.file.path);
+    const fileName = `upload-${Date.now()}${path.extname(req.file.originalname)}`;
+    
+    // Save file to database
+    const saveFileStmt = db.prepare(`
+      INSERT INTO arsip (filename, original_name, file_data, file_size, mime_type, year)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    
+    const fileResult = saveFileStmt.run(
+      fileName,
+      req.file.originalname,
+      fileBuffer,
+      req.file.size,
+      req.file.mimetype,
+      year
+    );
 
-    // Prepare statement untuk insert
+    // Prepare statement untuk insert peserta
     const insertStmt = db.prepare(`
       INSERT INTO peserta (
-        no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+        arsip_id, no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
         materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
         sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     let successCount = 0;
@@ -121,6 +103,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
       for (const row of rows) {
         try {
           insertStmt.run(
+            fileResult.lastInsertRowid, // Link ke arsip
             row.no || null,
             row.nama_peserta || '',
             row.nama_perusahaan || '',
@@ -161,7 +144,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
         success: successCount,
         failed: errorCount,
         year: year,
-        archived: archiveInfo.fileName
+        archived: req.file.originalname
       },
       errors: errors.length > 0 ? errors : undefined
     });
@@ -184,22 +167,15 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
 // Get list of archived years
 router.get('/arsip/years', authenticateToken, (req, res) => {
   try {
-    const archiveBaseDir = path.join(__dirname, '..', 'arsip');
-    
-    if (!fs.existsSync(archiveBaseDir)) {
-      return res.json({ success: true, years: [] });
-    }
-    
-    const years = fs.readdirSync(archiveBaseDir)
-      .filter(item => {
-        const itemPath = path.join(archiveBaseDir, item);
-        return fs.statSync(itemPath).isDirectory();
-      })
-      .sort((a, b) => b.localeCompare(a)); // Sort descending
+    const years = db.prepare(`
+      SELECT DISTINCT year 
+      FROM arsip 
+      ORDER BY year DESC
+    `).all();
     
     res.json({
       success: true,
-      years: years
+      years: years.map(y => y.year)
     });
     
   } catch (error) {
@@ -215,33 +191,35 @@ router.get('/arsip/years', authenticateToken, (req, res) => {
 router.get('/arsip/:year', authenticateToken, (req, res) => {
   try {
     const { year } = req.params;
-    const yearDir = path.join(__dirname, '..', 'arsip', year);
     
-    if (!fs.existsSync(yearDir)) {
-      return res.json({ success: true, files: [] });
-    }
-    
-    const files = fs.readdirSync(yearDir)
-      .filter(file => {
-        const ext = path.extname(file).toLowerCase();
-        return ['.xlsx', '.xls'].includes(ext);
-      })
-      .map(file => {
-        const filePath = path.join(yearDir, file);
-        const stats = fs.statSync(filePath);
-        return {
-          name: file,
-          size: stats.size,
-          uploadedAt: stats.mtime,
-          year: year
-        };
-      })
-      .sort((a, b) => b.uploadedAt - a.uploadedAt); // Sort by newest first
+    const files = db.prepare(`
+      SELECT 
+        a.id, 
+        a.filename, 
+        a.original_name, 
+        a.file_size, 
+        a.uploaded_at, 
+        a.year,
+        COUNT(p.id) as peserta_count
+      FROM arsip a
+      LEFT JOIN peserta p ON p.arsip_id = a.id
+      WHERE a.year = ?
+      GROUP BY a.id
+      ORDER BY a.uploaded_at DESC
+    `).all(year);
     
     res.json({
       success: true,
       year: year,
-      files: files
+      files: files.map(f => ({
+        id: f.id,
+        name: f.original_name,
+        filename: f.filename,
+        size: f.file_size,
+        uploadedAt: f.uploaded_at,
+        year: f.year,
+        pesertaCount: f.peserta_count
+      }))
     });
     
   } catch (error) {
@@ -254,25 +232,25 @@ router.get('/arsip/:year', authenticateToken, (req, res) => {
 });
 
 // Download archived file
-router.get('/arsip/:year/:filename', authenticateToken, (req, res) => {
+router.get('/arsip/:year/:id', authenticateToken, (req, res) => {
   try {
-    const { year, filename } = req.params;
-    const filePath = path.join(__dirname, '..', 'arsip', year, filename);
+    const { id } = req.params;
     
-    if (!fs.existsSync(filePath)) {
+    const file = db.prepare(`
+      SELECT * FROM arsip WHERE id = ?
+    `).get(id);
+    
+    if (!file) {
       return res.status(404).json({ 
         error: 'File tidak ditemukan' 
       });
     }
     
-    res.download(filePath, filename, (err) => {
-      if (err) {
-        console.error('Download error:', err);
-        res.status(500).json({ 
-          error: 'Gagal mendownload file' 
-        });
-      }
-    });
+    // Send file as download
+    res.setHeader('Content-Type', file.mime_type);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.original_name}"`);
+    res.setHeader('Content-Length', file.file_size);
+    res.send(file.file_data);
     
   } catch (error) {
     console.error('Download error:', error);
@@ -284,25 +262,18 @@ router.get('/arsip/:year/:filename', authenticateToken, (req, res) => {
 });
 
 // Delete archived file
-router.delete('/arsip/:year/:filename', authenticateToken, (req, res) => {
+router.delete('/arsip/:year/:id', authenticateToken, (req, res) => {
   try {
-    const { year, filename } = req.params;
-    const filePath = path.join(__dirname, '..', 'arsip', year, filename);
+    const { id } = req.params;
     
-    if (!fs.existsSync(filePath)) {
+    const result = db.prepare(`
+      DELETE FROM arsip WHERE id = ?
+    `).run(id);
+    
+    if (result.changes === 0) {
       return res.status(404).json({ 
         error: 'File tidak ditemukan' 
       });
-    }
-    
-    // Delete file
-    fs.unlinkSync(filePath);
-    
-    // Check if folder is empty, delete folder too
-    const yearDir = path.join(__dirname, '..', 'arsip', year);
-    const remainingFiles = fs.readdirSync(yearDir);
-    if (remainingFiles.length === 0) {
-      fs.rmdirSync(yearDir);
     }
     
     res.json({

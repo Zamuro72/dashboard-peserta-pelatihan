@@ -80,8 +80,9 @@ const api = {
     return response.data;
   },
 
-  getStats: async () => {
-    const response = await apiClient.get('/peserta/stats/summary');
+  getStats: async (arsipId) => {
+    const params = arsipId ? { arsip_id: arsipId } : {};
+    const response = await apiClient.get('/peserta/stats/summary', { params });
     return response.data;
   },
 
@@ -116,10 +117,20 @@ const api = {
     return response.data;
   },
 
-  downloadArsipFile: async (year, filename) => {
-    const response = await apiClient.get(`/upload/arsip/${year}/${filename}`, {
+  downloadArsipFile: async (year, fileId) => {
+    const response = await apiClient.get(`/upload/arsip/${year}/${fileId}`, {
       responseType: 'blob',
     });
+    
+    // Get filename from Content-Disposition header
+    const contentDisposition = response.headers['content-disposition'];
+    let filename = 'download.xlsx';
+    if (contentDisposition) {
+      const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+      if (filenameMatch) {
+        filename = filenameMatch[1];
+      }
+    }
     
     // Create download link
     const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -132,8 +143,8 @@ const api = {
     window.URL.revokeObjectURL(url);
   },
 
-  deleteArsipFile: async (year, filename) => {
-    const response = await apiClient.delete(`/upload/arsip/${year}/${filename}`);
+  deleteArsipFile: async (year, fileId) => {
+    const response = await apiClient.delete(`/upload/arsip/${year}/${fileId}`);
     return response.data;
   },
 };
