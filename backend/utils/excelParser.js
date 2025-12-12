@@ -115,10 +115,16 @@ export const parseExcel = (filePath) => {
           console.log('✓ Found SERTIFIKAT_DARI_KSO at column', index);
         }
         
-        // Sertifikat diterima Kandel
-        if (h.includes('sertifikat') && h.includes('diterima') && h.includes('kandel')) {
+        // Sertifikat diterima Kandel - PERBAIKAN: deteksi lebih fleksibel
+        if (h.includes('sertifikat') && h.includes('diterima') && 
+            (h.includes('kandel') || h.includes('oleh kandel'))) {
           colMap.sertifikat_diterima_kandel = index;
           console.log('✓ Found SERTIFIKAT_DITERIMA_KANDEL at column', index);
+        }
+        // Alternatif: cek hanya "diterima" dan "kandel" tanpa harus ada "sertifikat"
+        else if (h.includes('diterima') && h.includes('kandel') && !h.includes('peserta')) {
+          colMap.sertifikat_diterima_kandel = index;
+          console.log('✓ Found SERTIFIKAT_DITERIMA_KANDEL at column', index, '(alternative match)');
         }
         
         // Sertifikat diterima peserta
