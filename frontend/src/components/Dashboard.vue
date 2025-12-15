@@ -257,14 +257,24 @@
 				</div>
 			</div>
 		</div>
-	</div>
+		<!-- Logout Modal -->
+<LogoutModal
+  v-if="showLogoutModal"
+  @confirm="confirmLogout"
+  @cancel="cancelLogout"
+/>
+
+	</div> <!-- closing tag dashboard -->
 </template>
+
+	
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import { Search, Upload, LogOut, Filter, Trash2, FileSpreadsheet, Download } from 'lucide-vue-next'
 import api from '../services/api'
 import UploadModal from './UploadModal.vue'
+import LogoutModal from './LogoutModal.vue'
 
 const emit = defineEmits(['logout'])
 
@@ -273,6 +283,7 @@ const loading = ref(false)
 const searchTerm = ref('')
 const filterType = ref('all')
 const showUploadModal = ref(false)
+const showLogoutModal = ref(false)
 const stats = ref({ total: 0, bnsp: 0, kemnaker: 0 })
 
 // File selection states
@@ -376,9 +387,16 @@ const fetchStats = async () => {
 }
 
 const handleLogout = () => {
-	if (confirm('Apakah Anda yakin ingin logout?')) {
-		emit('logout')
-	}
+  showLogoutModal.value = true
+}
+
+const confirmLogout = () => {
+  showLogoutModal.value = false
+  emit('logout')
+}
+
+const cancelLogout = () => {
+  showLogoutModal.value = false
 }
 
 const handleUploadSuccess = () => {
