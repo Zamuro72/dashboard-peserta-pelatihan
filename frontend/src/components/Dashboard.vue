@@ -1,6 +1,6 @@
 <template>
 	<div class="dashboard">
-		<!-- Header -->
+		<!-- Header with Fade + Scale Animation -->
 		<div class="header">
 			<div class="header-content">
 				<div class="logo-wrap">
@@ -497,12 +497,30 @@ const formatDate = (date) => {
 	background-color: #f3f4f6;
 }
 
+/* ============================================
+   FADE + SCALE NAVBAR ANIMATION
+   ============================================ */
 .header {
 	background-color: white;
 	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 	position: sticky;
 	top: 0;
 	z-index: 10;
+	animation: fadeScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes fadeScale {
+	0% {
+		opacity: 0;
+		transform: scale(0.9) translateY(-20px);
+	}
+	60% {
+		transform: scale(1.02);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1) translateY(0);
+	}
 }
 
 .header-content {
@@ -512,66 +530,162 @@ const formatDate = (date) => {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
+	animation: slideIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s backwards;
+}
+
+@keyframes slideIn {
+	from {
+		opacity: 0;
+		transform: translateX(-30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
 }
 
 .logo-wrap {
 	display: flex;
 	align-items: center;
 	gap: 0.75rem;
+	animation: bounceIn 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s backwards;
+}
+
+@keyframes bounceIn {
+	0% {
+		opacity: 0;
+		transform: scale(0.3) rotate(-10deg);
+	}
+	50% {
+		transform: scale(1.05) rotate(2deg);
+	}
+	70% {
+		transform: scale(0.95) rotate(-1deg);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1) rotate(0);
+	}
 }
 
 .dashboard-logo {
 	height: 40px;
 	width: auto;
+	transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.dashboard-logo:hover {
+	transform: scale(1.1) rotate(5deg);
+	filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.3));
 }
 
 .header h1 {
 	font-size: 1.5rem;
 	font-weight: bold;
 	color: #1f2937;
+	transition: all 0.3s ease;
+}
+
+.header h1:hover {
+	color: #667eea;
+	transform: translateX(5px);
 }
 
 .header-actions {
 	display: flex;
 	gap: 0.75rem;
+	animation: fadeInRight 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.4s backwards;
 }
 
-.upload-btn-header {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	background-color: #16a34a;
-	color: white;
-	padding: 0.5rem 1rem;
-	border-radius: 0.5rem;
-	border: none;
-	cursor: pointer;
-	font-size: 0.875rem;
-	font-weight: 500;
-	transition: background-color 0.2s;
+@keyframes fadeInRight {
+	from {
+		opacity: 0;
+		transform: translateX(30px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(0);
+	}
 }
 
-.upload-btn-header:hover {
-	background-color: #15803d;
-}
-
+.upload-btn-header,
 .logout-btn {
 	display: flex;
 	align-items: center;
 	gap: 0.5rem;
-	background-color: #dc2626;
-	color: white;
 	padding: 0.5rem 1rem;
 	border-radius: 0.5rem;
 	border: none;
 	cursor: pointer;
 	font-size: 0.875rem;
 	font-weight: 500;
-	transition: background-color 0.2s;
+	position: relative;
+	overflow: hidden;
+	transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Button Hover Effects */
+.upload-btn-header::before,
+.logout-btn::before {
+	content: '';
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 0;
+	height: 0;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.3);
+	transform: translate(-50%, -50%);
+	transition: width 0.6s, height 0.6s;
+}
+
+.upload-btn-header:active::before,
+.logout-btn:active::before {
+	width: 300px;
+	height: 300px;
+}
+
+.upload-btn-header {
+	background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+	color: white;
+	box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+.upload-btn-header:hover {
+	transform: translateY(-3px) scale(1.05);
+	box-shadow: 0 8px 24px rgba(22, 163, 74, 0.4);
+}
+
+.upload-btn-header:active {
+	transform: translateY(-1px) scale(1.02);
+}
+
+.logout-btn {
+	background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+	color: white;
+	box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
 }
 
 .logout-btn:hover {
-	background-color: #b91c1c;
+	transform: translateY(-3px) scale(1.05);
+	box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
+}
+
+.logout-btn:active {
+	transform: translateY(-1px) scale(1.02);
+}
+
+.upload-btn-header svg,
+.logout-btn svg {
+	transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.upload-btn-header:hover svg {
+	transform: translateY(-2px) rotate(5deg);
+}
+
+.logout-btn:hover svg {
+	transform: rotate(15deg) scale(1.1);
 }
 
 .main-content {
@@ -983,11 +1097,6 @@ td {
 	padding: 0.75rem 1rem;
 	font-size: 0.875rem;
 	white-space: nowrap;
-}
-
-td.badge-cell {
-	white-space: normal;
-	min-width: 200px;
 }
 
 .font-medium { font-weight: 500; }
