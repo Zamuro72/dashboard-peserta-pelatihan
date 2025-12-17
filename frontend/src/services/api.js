@@ -1,3 +1,4 @@
+// frontend/src/services/api.js - UPDATED
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
@@ -145,6 +146,17 @@ const api = {
 
   deleteArsipFile: async (year, fileId) => {
     const response = await apiClient.delete(`/upload/arsip/${year}/${fileId}`);
+    return response.data;
+  },
+
+  // Reminder
+  getReminderCount: async () => {
+    const response = await apiClient.get('/reminder/count');
+    return response.data;
+  },
+
+  getReminderData: async () => {
+    const response = await apiClient.get('/reminder/data');
     return response.data;
   },
 };

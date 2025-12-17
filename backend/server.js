@@ -1,9 +1,11 @@
+// backend/server.js - UPDATED
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import authRoutes from './api/auth.js';
 import pesertaRoutes from './api/peserta.js';
 import uploadRoutes from './api/upload.js';
+import reminderRoutes from './api/reminder.js';
 
 dotenv.config();
 
@@ -22,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/peserta', pesertaRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/reminder', reminderRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
