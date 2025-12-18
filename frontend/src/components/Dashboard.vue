@@ -1,4 +1,3 @@
-<!-- frontend/src/components/Dashboard.vue - UPDATED -->
 <template>
 	<div class="dashboard">
 		<!-- Sidebar Component -->
@@ -10,7 +9,7 @@
 			@navigate="handleNavigation"
 		/>
 
-		<!-- Header with Fade + Scale Animation -->
+		<!-- Header -->
 		<div class="header">
 			<div class="header-content">
 				<div class="logo-wrap">
@@ -52,12 +51,11 @@
 			<!-- Show Reminder Page or Dashboard -->
 			<ReminderPage 
 				v-if="currentPage === 'reminder'"
-				@back="currentPage = 'dashboard'"
 			/>
 
 			<div v-else>
 				<!-- Notification Banner -->
-				<div v-if="reminderCount > 0" class="notification-banner">
+				<div v-if="reminderCount > 0 && !dismissBanner" class="notification-banner">
 					<div class="banner-icon">
 						<AlertTriangle :size="24" />
 					</div>
@@ -144,7 +142,7 @@
 					</div>
 				</div>
 
-				<!-- Data Display Area (hanya muncul kalau ada file dipilih) -->
+				<!-- Data Display Area -->
 				<div v-if="selectedFileId" class="data-section">
 					<!-- Stats Cards -->
 					<div class="stats-grid">
@@ -165,7 +163,6 @@
 					<!-- Controls -->
 					<div class="controls-card">
 						<div class="controls-grid">
-							<!-- Search -->
 							<div class="search-box">
 								<Search class="icon-left" :size="20" />
 								<input
@@ -175,7 +172,6 @@
 								/>
 							</div>
 
-							<!-- Filter -->
 							<div class="filter-box">
 								<Filter class="icon-left" :size="20" />
 								<select v-model="filterType">
@@ -186,7 +182,6 @@
 							</div>
 						</div>
 
-						<!-- Results Info & Delete Button -->
 						<div class="results-actions">
 							<div class="results-info">
 								Menampilkan {{ pesertaData.length }} peserta
@@ -281,14 +276,13 @@
 			</div>
 		</div>
 
-		<!-- Upload Modal -->
+		<!-- Modals -->
 		<UploadModal
 			v-if="showUploadModal"
 			@close="showUploadModal = false"
 			@success="handleUploadSuccess"
 		/>
 
-		<!-- Delete Confirmation Modal -->
 		<div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
 			<div class="modal-content delete-modal">
 				<div class="modal-header">
@@ -299,9 +293,7 @@
 					<p class="warning-text">⚠️ Tindakan ini tidak dapat dibatalkan!</p>
 				</div>
 				<div class="modal-footer">
-					<button @click="showDeleteModal = false" class="btn-cancel">
-						Batal
-					</button>
+					<button @click="showDeleteModal = false" class="btn-cancel">Batal</button>
 					<button @click="confirmDelete" :disabled="deleting" class="btn-delete">
 						{{ deleting ? 'Menghapus...' : 'Hapus' }}
 					</button>
@@ -309,13 +301,11 @@
 			</div>
 		</div>
 
-		<!-- Logout Modal -->
 		<LogoutModal
 			v-if="showLogoutModal"
 			@confirm="confirmLogout"
 			@cancel="cancelLogout"
 		/>
-
 	</div>
 </template>
 
@@ -338,13 +328,11 @@ const showUploadModal = ref(false)
 const showLogoutModal = ref(false)
 const stats = ref({ total: 0, bnsp: 0, kemnaker: 0 })
 
-// Sidebar & Navigation
 const sidebarOpen = ref(false)
 const currentPage = ref('dashboard')
 const reminderCount = ref(0)
 const dismissBanner = ref(false)
 
-// File selection states
 const loadingYears = ref(true)
 const loadingFiles = ref(false)
 const arsipYears = ref([])
@@ -352,12 +340,10 @@ const selectedYear = ref('')
 const arsipFiles = ref([])
 const selectedFileId = ref(null)
 
-// Delete states
 const selectedIds = ref([])
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 
-// Computed
 const isAllSelected = computed(() => {
 	return pesertaData.value.length > 0 && selectedIds.value.length === pesertaData.value.length
 })
@@ -482,7 +468,6 @@ const handleUploadSuccess = () => {
 	pesertaData.value = []
 }
 
-// Delete functions
 const toggleSelect = (id) => {
 	const index = selectedIds.value.indexOf(id)
 	if (index > -1) {
@@ -527,7 +512,6 @@ const confirmDelete = async () => {
 	}
 }
 
-// File actions
 const downloadFile = async (file) => {
 	try {
 		await api.downloadArsipFile(file.year, file.id)
@@ -581,9 +565,55 @@ const formatDate = (date) => {
 </script>
 
 <style scoped>
-/* ... (keep all previous styles) ... */
+.dashboard {
+	min-height: 100vh;
+	background-color: #f3f4f6;
+}
 
-/* Notification Bell Button */
+.header {
+	background-color: white;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	position: sticky;
+	top: 0;
+	z-index: 10;
+}
+
+.header-content {
+	max-width: 80rem;
+	margin: 0 auto;
+	padding: 1rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.logo-wrap {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.dashboard-logo {
+	height: 40px;
+	width: auto;
+	transition: all 0.3s;
+}
+
+.dashboard-logo:hover {
+	transform: scale(1.1);
+}
+
+.header h1 {
+	font-size: 1.5rem;
+	font-weight: bold;
+	color: #1f2937;
+}
+
+.header-actions {
+	display: flex;
+	gap: 0.75rem;
+}
+
 .notification-btn {
 	position: relative;
 	display: flex;
@@ -598,24 +628,11 @@ const formatDate = (date) => {
 	background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 	color: white;
 	box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-	transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-	animation: bellShake 2s ease-in-out infinite;
-}
-
-@keyframes bellShake {
-	0%, 50%, 100% {
-		transform: rotate(0deg);
-	}
-	10%, 30% {
-		transform: rotate(-10deg);
-	}
-	20%, 40% {
-		transform: rotate(10deg);
-	}
+	transition: all 0.3s;
 }
 
 .notification-btn:hover {
-	transform: translateY(-3px) scale(1.05);
+	transform: translateY(-2px);
 	box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
 }
 
@@ -631,20 +648,44 @@ const formatDate = (date) => {
 	border-radius: 9999px;
 	min-width: 20px;
 	text-align: center;
-	box-shadow: 0 2px 8px rgba(220, 38, 38, 0.4);
-	animation: pulse 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-	0%, 100% {
-		transform: scale(1);
-	}
-	50% {
-		transform: scale(1.1);
-	}
+.upload-btn-header,
+.logout-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 1rem;
+	border-radius: 0.5rem;
+	border: none;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: all 0.3s;
 }
 
-/* Notification Banner */
+.upload-btn-header {
+	background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+	color: white;
+	box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+}
+
+.upload-btn-header:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 24px rgba(22, 163, 74, 0.4);
+}
+
+.logout-btn {
+	background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+	color: white;
+	box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.logout-btn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
+}
+
 .notification-banner {
 	background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
 	border: 2px solid #f59e0b;
@@ -655,33 +696,11 @@ const formatDate = (date) => {
 	align-items: center;
 	gap: 1rem;
 	box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-	animation: slideDown 0.5s ease-out;
-}
-
-@keyframes slideDown {
-	from {
-		opacity: 0;
-		transform: translateY(-20px);
-	}
-	to {
-		opacity: 1;
-		transform: translateY(0);
-	}
 }
 
 .banner-icon {
 	color: #f59e0b;
 	flex-shrink: 0;
-	animation: bounce 2s ease-in-out infinite;
-}
-
-@keyframes bounce {
-	0%, 100% {
-		transform: translateY(0);
-	}
-	50% {
-		transform: translateY(-5px);
-	}
 }
 
 .banner-content {
@@ -732,113 +751,502 @@ const formatDate = (date) => {
 	background-color: rgba(146, 64, 14, 0.1);
 }
 
-/* Keep all other existing styles from the original Dashboard.vue */
-.dashboard {
-	min-height: 100vh;
-	background-color: #f3f4f6;
-}
-
-.header {
-	background-color: white;
-	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-	position: sticky;
-	top: 0;
-	z-index: 10;
-	animation: fadeScale 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@keyframes fadeScale {
-	0% {
-		opacity: 0;
-		transform: scale(0.9) translateY(-20px);
-	}
-	60% {
-		transform: scale(1.02);
-	}
-	100% {
-		opacity: 1;
-		transform: scale(1) translateY(0);
-	}
-}
-
-.header-content {
-	max-width: 80rem;
-	margin: 0 auto;
-	padding: 1rem;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.logo-wrap {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-}
-
-.dashboard-logo {
-	height: 40px;
-	width: auto;
-	transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.dashboard-logo:hover {
-	transform: scale(1.1) rotate(5deg);
-	filter: drop-shadow(0 4px 8px rgba(102, 126, 234, 0.3));
-}
-
-.header h1 {
-	font-size: 1.5rem;
-	font-weight: bold;
-	color: #1f2937;
-}
-
-.header-actions {
-	display: flex;
-	gap: 0.75rem;
-}
-
-.upload-btn-header,
-.logout-btn {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.5rem 1rem;
-	border-radius: 0.5rem;
-	border: none;
-	cursor: pointer;
-	font-size: 0.875rem;
-	font-weight: 500;
-	transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.upload-btn-header {
-	background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
-	color: white;
-	box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
-}
-
-.upload-btn-header:hover {
-	transform: translateY(-3px) scale(1.05);
-	box-shadow: 0 8px 24px rgba(22, 163, 74, 0.4);
-}
-
-.logout-btn {
-	background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-	color: white;
-	box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-}
-
-.logout-btn:hover {
-	transform: translateY(-3px) scale(1.05);
-	box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
-}
-
 .main-content {
 	max-width: 80rem;
 	margin: 0 auto;
 	padding: 1.5rem;
 }
 
-/* All other existing styles... */
+.file-selection-card {
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	padding: 1.5rem;
+	margin-bottom: 1.5rem;
+}
+
+.selection-header {
+	margin-bottom: 1.5rem;
+}
+
+.selection-header h2 {
+	font-size: 1.25rem;
+	font-weight: bold;
+	color: #1f2937;
+	margin-bottom: 0.25rem;
+}
+
+.selection-header p {
+	color: #6b7280;
+	font-size: 0.875rem;
+}
+
+.loading-selection {
+	text-align: center;
+	padding: 2rem;
+	color: #6b7280;
+}
+
+.no-files-yet {
+	text-align: center;
+	padding: 3rem 1rem;
+	color: #6b7280;
+}
+
+.no-files-yet svg {
+	margin: 0 auto 1rem;
+	color: #9ca3af;
+}
+
+.no-files-yet p {
+	margin-bottom: 1.5rem;
+	font-size: 1rem;
+}
+
+.upload-btn-large {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	background-color: #16a34a;
+	color: white;
+	padding: 0.75rem 1.5rem;
+	border-radius: 0.5rem;
+	border: none;
+	cursor: pointer;
+	font-size: 1rem;
+	font-weight: 500;
+	transition: background-color 0.2s;
+}
+
+.upload-btn-large:hover {
+	background-color: #15803d;
+}
+
+.file-selection-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.year-selector {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.year-selector label {
+	font-weight: 500;
+	color: #374151;
+}
+
+.year-select {
+	padding: 0.5rem 1rem;
+	border: 1px solid #d1d5db;
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	min-width: 150px;
+	cursor: pointer;
+}
+
+.loading-files-small,
+.no-files-small {
+	text-align: center;
+	padding: 1rem;
+	color: #6b7280;
+	font-size: 0.875rem;
+}
+
+.file-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1rem;
+}
+
+.file-card {
+	display: flex;
+	align-items: flex-start;
+	gap: 1rem;
+	padding: 1rem;
+	border: 2px solid #e5e7eb;
+	border-radius: 0.5rem;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.file-card:hover {
+	border-color: #2563eb;
+	background-color: #f9fafb;
+}
+
+.file-card.active {
+	border-color: #2563eb;
+	background-color: #eff6ff;
+}
+
+.file-card-icon {
+	color: #16a34a;
+	flex-shrink: 0;
+}
+
+.file-card-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.file-card-name {
+	font-weight: 500;
+	color: #1f2937;
+	margin-bottom: 0.25rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.file-card-meta {
+	display: flex;
+	gap: 0.75rem;
+	font-size: 0.75rem;
+	color: #2563eb;
+	font-weight: 500;
+	margin-bottom: 0.25rem;
+}
+
+.file-card-date {
+	font-size: 0.75rem;
+	color: #6b7280;
+}
+
+.file-card-actions {
+	display: flex;
+	gap: 0.25rem;
+	flex-shrink: 0;
+}
+
+.btn-icon {
+	padding: 0.375rem;
+	border: none;
+	border-radius: 0.375rem;
+	background-color: #f3f4f6;
+	color: #374151;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	transition: background-color 0.2s;
+}
+
+.btn-icon:hover {
+	background-color: #e5e7eb;
+}
+
+.btn-danger {
+	color: #dc2626;
+}
+
+.btn-danger:hover {
+	background-color: #fee2e2;
+}
+
+.data-section {
+	animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(10px); }
+	to { opacity: 1; transform: translateY(0); }
+}
+
+.stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+	gap: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.stat-card {
+	background-color: white;
+	padding: 1.5rem;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.stat-label {
+	font-size: 0.875rem;
+	color: #6b7280;
+	margin-bottom: 0.25rem;
+}
+
+.stat-value {
+	font-size: 2rem;
+	font-weight: bold;
+	color: #1f2937;
+}
+
+.stat-bnsp .stat-value {
+	color: #2563eb;
+}
+
+.stat-kemnaker .stat-value {
+	color: #16a34a;
+}
+
+.controls-card {
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	padding: 1rem;
+	margin-bottom: 1.5rem;
+}
+
+.controls-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+	gap: 1rem;
+}
+
+.search-box,
+.filter-box {
+	position: relative;
+}
+
+.icon-left {
+	position: absolute;
+	left: 0.75rem;
+	top: 50%;
+	transform: translateY(-50%);
+	color: #9ca3af;
+	pointer-events: none;
+}
+
+.search-box input,
+.filter-box select {
+	width: 100%;
+	padding: 0.5rem 1rem 0.5rem 2.5rem;
+	border: 1px solid #d1d5db;
+	border-radius: 0.5rem;
+	outline: none;
+	font-size: 0.875rem;
+}
+
+.filter-box select {
+	cursor: pointer;
+	background-color: white;
+}
+
+.results-actions {
+	margin-top: 1rem;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.results-info {
+	font-size: 0.875rem;
+	color: #6b7280;
+}
+
+.selected-count {
+	color: #2563eb;
+	font-weight: 500;
+}
+
+.delete-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	background-color: #dc2626;
+	color: white;
+	padding: 0.5rem 1rem;
+	border-radius: 0.5rem;
+	border: none;
+	cursor: pointer;
+	font-size: 0.875rem;
+	font-weight: 500;
+	transition: background-color 0.2s;
+}
+
+.delete-btn:hover {
+	background-color: #b91c1c;
+}
+
+.table-card {
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	overflow: hidden;
+}
+
+.loading,
+.no-data {
+	padding: 3rem;
+	text-align: center;
+	color: #6b7280;
+}
+
+.table-wrapper {
+	overflow-x: auto;
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+	min-width: 1400px;
+}
+
+thead {
+	background-color: #f9fafb;
+	border-bottom: 2px solid #e5e7eb;
+}
+
+th {
+	padding: 0.75rem 1rem;
+	text-align: left;
+	font-size: 0.75rem;
+	font-weight: 500;
+	color: #374151;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.checkbox-col {
+	width: 40px;
+	text-align: center;
+}
+
+.checkbox-input {
+	cursor: pointer;
+	width: 16px;
+	height: 16px;
+}
+
+tbody tr {
+	border-bottom: 1px solid #e5e7eb;
+	transition: background-color 0.2s;
+}
+
+tbody tr:hover {
+	background-color: #f9fafb;
+}
+
+tbody tr.row-selected {
+	background-color: #eff6ff;
+}
+
+td {
+	padding: 0.75rem 1rem;
+	font-size: 0.875rem;
+	white-space: nowrap;
+}
+
+.font-medium { font-weight: 500; }
+.text-center { text-align: center; }
+
+.badge { 
+	display: inline-block; 
+	padding: 0.25rem 0.5rem; 
+	border-radius: 9999px; 
+	font-size: 0.75rem; 
+}
+
+.badge-bnsp { 
+	background-color: #eef2ff; 
+	color: #2563eb; 
+}
+
+.badge-kemnaker { 
+	background-color: #ecfdf5; 
+	color: #16a34a; 
+}
+
+.badge-default { 
+	background-color: #f3f4f6; 
+	color: #6b7280; 
+}
+
+.modal-overlay {
+	position: fixed;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1rem;
+	z-index: 50;
+}
+
+.modal-content {
+	background-color: white;
+	border-radius: 0.5rem;
+	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 28rem;
+}
+
+.delete-modal .modal-header {
+	padding: 1.5rem;
+	border-bottom: 1px solid #e5e7eb;
+}
+
+.delete-modal .modal-header h2 {
+	font-size: 1.25rem;
+	font-weight: bold;
+	color: #1f2937;
+}
+
+.delete-modal .modal-body {
+	padding: 1.5rem;
+}
+
+.delete-modal .modal-body p {
+	margin: 0.5rem 0;
+	color: #374151;
+}
+
+.warning-text {
+	color: #dc2626;
+	font-weight: 500;
+	margin-top: 1rem !important;
+}
+
+.modal-footer {
+	display: flex;
+	gap: 0.5rem;
+	padding: 1.5rem;
+	border-top: 1px solid #e5e7eb;
+}
+
+.btn-cancel,
+.btn-delete {
+	flex: 1;
+	padding: 0.5rem 1rem;
+	border-radius: 0.5rem;
+	border: none;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.btn-cancel {
+	background-color: white;
+	border: 1px solid #d1d5db;
+	color: #374151;
+}
+
+.btn-cancel:hover {
+	background-color: #f9fafb;
+}
+
+.btn-delete {
+	background-color: #dc2626;
+	color: white;
+}
+
+.btn-delete:hover:not(:disabled) {
+	background-color: #b91c1c;
+}
+
+.btn-delete:disabled {
+	background-color: #9ca3af;
+	cursor: not-allowed;
+}
 </style>
