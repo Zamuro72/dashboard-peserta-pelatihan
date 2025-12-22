@@ -1,5 +1,4 @@
 <!-- frontend/src/components/ReminderPage.vue -->
-<!-- File ini di: frontend/src/components/ReminderPage.vue -->
 <template>
   <div class="reminder-page">
     <div class="page-header">
@@ -39,7 +38,7 @@
         <input
           type="text"
           v-model="searchTerm"
-          placeholder="Cari peserta atau perusahaan..."
+          placeholder="Cari peserta, perusahaan, nomor WA..."
         />
       </div>
 
@@ -83,6 +82,7 @@
               <th>No</th>
               <th>Nama Peserta</th>
               <th>Perusahaan</th>
+              <th>Nomor WhatsApp</th>
               <th>Materi/Skema</th>
               <th>Tanggal Terima Sertifikat</th>
               <th>Expired Date</th>
@@ -95,6 +95,7 @@
               <td>{{ item.no }}</td>
               <td class="font-medium">{{ item.nama_peserta }}</td>
               <td>{{ item.nama_perusahaan }}</td>
+              <td>{{ item.nomor_whatsapp || '-' }}</td>
               <td>
                 <span :class="getBadgeClass(item.materi_skema)">
                   {{ item.materi_skema }}
@@ -155,6 +156,7 @@ const filteredReminderData = computed(() => {
   return reminderData.value.filter(item => 
     item.nama_peserta?.toLowerCase().includes(search) ||
     item.nama_perusahaan?.toLowerCase().includes(search) ||
+    item.nomor_whatsapp?.toLowerCase().includes(search) ||
     item.materi_skema?.toLowerCase().includes(search)
   )
 })
@@ -166,6 +168,7 @@ const filteredExpiredData = computed(() => {
   return expiredData.value.filter(item => 
     item.nama_peserta?.toLowerCase().includes(search) ||
     item.nama_perusahaan?.toLowerCase().includes(search) ||
+    item.nomor_whatsapp?.toLowerCase().includes(search) ||
     item.materi_skema?.toLowerCase().includes(search)
   )
 })

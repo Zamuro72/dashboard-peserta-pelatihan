@@ -168,7 +168,7 @@
 								<input
 									type="text"
 									v-model="searchTerm"
-									placeholder="Cari peserta, perusahaan, materi..."
+									placeholder="Cari peserta, perusahaan, nomor WA..."
 								/>
 							</div>
 
@@ -222,6 +222,7 @@
 										<th>No</th>
 										<th>Nama Peserta</th>
 										<th>Perusahaan</th>
+										<th>Nomor WhatsApp</th>
 										<th>Pelatihan</th>
 										<th>Ujikom/Praktek</th>
 										<th>Materi/Skema</th>
@@ -246,6 +247,7 @@
 										<td>{{ item.no }}</td>
 										<td class="font-medium">{{ item.nama_peserta }}</td>
 										<td>{{ item.nama_perusahaan }}</td>
+										<td>{{ item.nomor_whatsapp || '-' }}</td>
 										<td>{{ item.pelatihan }}</td>
 										<td>{{ item.ujikom_praktek }}</td>
 										<td>

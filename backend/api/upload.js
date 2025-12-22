@@ -85,13 +85,13 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
       year
     );
 
-    // Prepare statement untuk insert peserta
+    // Prepare statement untuk insert peserta - UPDATED dengan nomor_whatsapp
     const insertStmt = db.prepare(`
       INSERT INTO peserta (
-        arsip_id, no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+        arsip_id, no, nama_peserta, nama_perusahaan, nomor_whatsapp, pelatihan, ujikom_praktek,
         materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
         sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     let successCount = 0;
@@ -107,6 +107,7 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
             row.no || null,
             row.nama_peserta || '',
             row.nama_perusahaan || '',
+            row.nomor_whatsapp || '', // TAMBAHAN BARU
             row.pelatihan || '',
             row.ujikom_praktek || '',
             row.materi_skema || '',

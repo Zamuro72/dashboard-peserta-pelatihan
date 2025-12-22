@@ -42,6 +42,7 @@ const initTables = () => {
         no INTEGER,
         nama_peserta TEXT,
         nama_perusahaan TEXT,
+        nomor_whatsapp TEXT,
         pelatihan TEXT,
         ujikom_praktek TEXT,
         materi_skema TEXT,
@@ -70,6 +71,18 @@ const initTables = () => {
         uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add column if not exists (for existing databases)
+    try {
+      db.exec(`ALTER TABLE peserta ADD COLUMN nomor_whatsapp TEXT`);
+      console.log('✅ Column nomor_whatsapp added');
+    } catch (e) {
+      if (!e.message.includes('duplicate column name')) {
+        console.log('⚠️ Column already exists or other error:', e.message);
+      } else {
+        console.log('✅ Column nomor_whatsapp already exists');
+      }
+    }
 
     // Insert default user jika belum ada
     const userExists = db.prepare('SELECT COUNT(*) as count FROM users WHERE username = ?').get('kandel');

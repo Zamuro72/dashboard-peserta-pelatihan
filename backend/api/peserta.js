@@ -39,11 +39,12 @@ router.get('/', authenticateToken, async (req, res) => {
       query += ` AND (
         nama_peserta LIKE ? OR 
         nama_perusahaan LIKE ? OR 
+        nomor_whatsapp LIKE ? OR
         materi_skema LIKE ? OR 
         kso_lsp LIKE ?
       )`;
       const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam, searchParam);
+      params.push(searchParam, searchParam, searchParam, searchParam, searchParam);
     }
 
     query += ' ORDER BY no ASC';
@@ -95,19 +96,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
 router.post('/', authenticateToken, async (req, res) => {
   try {
     const {
-      no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+      no, nama_peserta, nama_perusahaan, nomor_whatsapp, pelatihan, ujikom_praktek,
       materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
       sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
     } = req.body;
 
     const result = db.prepare(`
       INSERT INTO peserta (
-        no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+        no, nama_peserta, nama_perusahaan, nomor_whatsapp, pelatihan, ujikom_praktek,
         materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
         sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
-      no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+      no, nama_peserta, nama_perusahaan, nomor_whatsapp, pelatihan, ujikom_praktek,
       materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
       sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
     );
@@ -132,21 +133,21 @@ router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const {
-      no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+      no, nama_peserta, nama_perusahaan, nomor_whatsapp, pelatihan, ujikom_praktek,
       materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
       sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
     } = req.body;
 
     const result = db.prepare(`
       UPDATE peserta SET
-        no = ?, nama_peserta = ?, nama_perusahaan = ?, pelatihan = ?,
+        no = ?, nama_peserta = ?, nama_perusahaan = ?, nomor_whatsapp = ?, pelatihan = ?,
         ujikom_praktek = ?, materi_skema = ?, kso_lsp = ?, skl_sertifikat = ?,
         tanggal_invoice = ?, sertifikat_dari_kso = ?, 
         sertifikat_diterima_kandel = ?, sertifikat_diterima_peserta = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `).run(
-      no, nama_peserta, nama_perusahaan, pelatihan, ujikom_praktek,
+      no, nama_peserta, nama_perusahaan, nomor_whatsapp, pelatihan, ujikom_praktek,
       materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
       sertifikat_dari_kso, sertifikat_diterima_kandel, 
       sertifikat_diterima_peserta, id

@@ -70,6 +70,21 @@ export const parseExcel = (filePath) => {
           console.log('✓ Found NAMA_PERUSAHAAN at column', index);
         }
         
+        // Nomor WhatsApp - TAMBAHAN BARU
+        if (h.includes('nomor') && h.includes('whatsapp')) {
+          colMap.nomor_whatsapp = index;
+          console.log('✓ Found NOMOR_WHATSAPP at column', index);
+        }
+        // Alternatif deteksi WhatsApp
+        else if (h.includes('no') && h.includes('wa')) {
+          colMap.nomor_whatsapp = index;
+          console.log('✓ Found NOMOR_WHATSAPP at column', index, '(no wa)');
+        }
+        else if (h.includes('whatsapp') || h === 'wa' || h === 'no. wa') {
+          colMap.nomor_whatsapp = index;
+          console.log('✓ Found NOMOR_WHATSAPP at column', index, '(alternative)');
+        }
+        
         // Pelatihan - PERBAIKAN: cek berbagai variasi
         if ((h === 'pelatihan' || h.includes('tanggal pelatihan') || h.includes('tgl pelatihan')) 
             && !h.includes('peserta') && !h.includes('ujikom') && !h.includes('praktek')) {
@@ -135,21 +150,20 @@ export const parseExcel = (filePath) => {
       });
 
       // FALLBACK: Jika pelatihan/ujikom tidak ketemu, coba deteksi by position
-      // Biasanya struktur: No | Nama | Perusahaan | Pelatihan | Ujikom | ...
-      if (!colMap.pelatihan && headers.length > 3) {
-        // Cek kolom D (index 3) dan E (index 4)
+      // Biasanya struktur: No | Nama | Perusahaan | WhatsApp | Pelatihan | Ujikom | ...
+      if (!colMap.pelatihan && headers.length > 4) {
+        // Cek kolom E (index 4) - setelah WhatsApp
         console.log('⚠️ Pelatihan not found, checking by position...');
         
-        // Kolom D biasanya Pelatihan
         if (!colMap.pelatihan) {
-          colMap.pelatihan = 3;
-          console.log('✓ Set PELATIHAN to column D (index 3) by fallback');
+          colMap.pelatihan = 4;
+          console.log('✓ Set PELATIHAN to column E (index 4) by fallback');
         }
         
-        // Kolom E biasanya Ujikom
+        // Kolom F biasanya Ujikom
         if (!colMap.ujikom_praktek) {
-          colMap.ujikom_praktek = 4;
-          console.log('✓ Set UJIKOM_PRAKTEK to column E (index 4) by fallback');
+          colMap.ujikom_praktek = 5;
+          console.log('✓ Set UJIKOM_PRAKTEK to column F (index 5) by fallback');
         }
       }
 
@@ -210,6 +224,8 @@ export const parseExcel = (filePath) => {
         if (rowData.nama_peserta && rowData.nama_peserta.trim() !== '') {
           console.log(`Row ${rowIndex + 1}:`, {
             nama: rowData.nama_peserta,
+            perusahaan: rowData.nama_perusahaan,
+            whatsapp: rowData.nomor_whatsapp,
             pelatihan: rowData.pelatihan,
             ujikom: rowData.ujikom_praktek
           });
