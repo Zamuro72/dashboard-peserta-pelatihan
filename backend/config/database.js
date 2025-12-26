@@ -24,12 +24,13 @@ db.pragma('foreign_keys = ON');
 // Inisialisasi tabel
 const initTables = () => {
   try {
-    // Tabel users
+    // Tabel users - UPDATED dengan role
     db.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
+        role TEXT DEFAULT 'admin',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
@@ -84,12 +85,29 @@ const initTables = () => {
       }
     }
 
-    // Insert default user jika belum ada
-    const userExists = db.prepare('SELECT COUNT(*) as count FROM users WHERE username = ?').get('kandel');
-    
-    if (!userExists || userExists.count === 0) {
-      db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run('kandel', 'kandelsekecosukses');
-      console.log('✅ Default user created');
+    // Add role column if not exists
+    try {
+      db.exec(`ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'admin'`);
+      console.log('✅ Column role added');
+    } catch (e) {
+      if (!e.message.includes('duplicate column name')) {
+        console.log('⚠️ Column already exists or other error:', e.message);
+      } else {
+        console.log('✅ Column role already exists');
+      }
+    }
+
+    // Insert default users jika belum ada
+    const adminExists = db.prepare('SELECT COUNT(*) as count FROM users WHERE username = ?').get('kandel');
+    if (!adminExists || adminExists.count === 0) {
+      db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('kandel', 'kandelsekecosukses', 'admin');
+      console.log('✅ Default admin user created');
+    }
+
+    const marketingExists = db.prepare('SELECT COUNT(*) as count FROM users WHERE username = ?').get('marketing');
+    if (!marketingExists || marketingExists.count === 0) {
+      db.prepare('INSERT INTO users (username, password, role) VALUES (?, ?, ?)').run('marketing', 'marketingkandelsukses', 'marketing');
+      console.log('✅ Default marketing user created');
     }
 
     console.log('✅ Database tables initialized');

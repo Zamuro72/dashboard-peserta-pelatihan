@@ -18,7 +18,12 @@
     <!-- Main App -->
     <div v-else>
       <LoginPage v-if="!isLoggedIn" @login="handleLogin" />
-      <Dashboard v-else @logout="handleLogout" />
+      
+      <!-- Admin Dashboard -->
+      <Dashboard v-else-if="userRole === 'admin'" @logout="handleLogout" />
+      
+      <!-- Marketing Dashboard -->
+      <MarketingDashboard v-else-if="userRole === 'marketing'" @logout="handleLogout" />
     </div>
   </div>
 </template>
@@ -27,10 +32,12 @@
 import { ref, onMounted } from 'vue'
 import LoginPage from './components/LoginPage.vue'
 import Dashboard from './components/Dashboard.vue'
+import MarketingDashboard from './components/MarketingDashboard.vue'
 import api from './services/api'
 
 const isLoggedIn = ref(false)
 const showLoader = ref(true)
+const userRole = ref('admin')
 
 onMounted(async () => {
   // Show loader for 5 seconds
@@ -38,10 +45,12 @@ onMounted(async () => {
     const token = localStorage.getItem('token')
     if (token) {
       try {
-        await api.verifyToken(token)
+        const response = await api.verifyToken(token)
         isLoggedIn.value = true
+        userRole.value = response.user.role || 'admin'
       } catch (error) {
         localStorage.removeItem('token')
+        localStorage.removeItem('userRole')
         isLoggedIn.value = false
       }
     }
@@ -49,14 +58,18 @@ onMounted(async () => {
   }, 5000)
 })
 
-const handleLogin = (token) => {
-  localStorage.setItem('token', token)
+const handleLogin = (data) => {
+  localStorage.setItem('token', data.token)
+  localStorage.setItem('userRole', data.role)
   isLoggedIn.value = true
+  userRole.value = data.role
 }
 
 const handleLogout = () => {
   localStorage.removeItem('token')
+  localStorage.removeItem('userRole')
   isLoggedIn.value = false
+  userRole.value = 'admin'
 }
 </script>
 

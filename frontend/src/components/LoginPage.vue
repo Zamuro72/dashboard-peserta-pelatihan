@@ -60,7 +60,11 @@ const handleLogin = async () => {
 
   try {
     const response = await api.login(username.value, password.value)
-    emit('login', response.token)
+    // Emit both token and role
+    emit('login', {
+      token: response.token,
+      role: response.user.role
+    })
   } catch (err) {
     error.value = err.response?.data?.error || 'Login gagal. Silakan coba lagi.'
   } finally {

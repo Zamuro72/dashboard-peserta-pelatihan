@@ -4,7 +4,7 @@ import db from '../config/database.js';
 
 const router = express.Router();
 
-// Login endpoint
+// Login endpoint - UPDATED with role
 router.post('/login', async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -15,7 +15,7 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Query user from database
+    // Query user from database - UPDATED select role
     const user = db.prepare('SELECT * FROM users WHERE username = ? AND password = ?').get(username, password);
 
     if (!user) {
@@ -24,9 +24,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Generate JWT token
+    // Generate JWT token - UPDATED include role
     const token = jwt.sign(
-      { id: user.id, username: user.username },
+      { 
+        id: user.id, 
+        username: user.username,
+        role: user.role || 'admin'
+      },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
@@ -37,7 +41,8 @@ router.post('/login', async (req, res) => {
       token,
       user: {
         id: user.id,
-        username: user.username
+        username: user.username,
+        role: user.role || 'admin'
       }
     });
 
