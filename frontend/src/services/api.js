@@ -159,6 +159,27 @@ const api = {
     const response = await apiClient.get('/reminder/data');
     return response.data;
   },
+
+  // Telat Bayar
+  getTelatBayarCount: async () => {
+    const response = await apiClient.get('/telat-bayar/count');
+    return response.data;
+  },
+
+  getTelatBayarData: async (params = {}) => {
+    const response = await apiClient.get('/telat-bayar/data', { params });
+    return response.data;
+  },
+
+  markTelatBayar: async (id, catatan) => {
+    const response = await apiClient.post(`/telat-bayar/mark/${id}`, { catatan });
+    return response.data;
+  },
+
+  unmarkTelatBayar: async (id) => {
+    const response = await apiClient.post(`/telat-bayar/unmark/${id}`);
+    return response.data;
+  },
 };
 
 export default api;

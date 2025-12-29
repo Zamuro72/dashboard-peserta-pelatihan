@@ -6,6 +6,7 @@ import authRoutes from './api/auth.js';
 import pesertaRoutes from './api/peserta.js';
 import uploadRoutes from './api/upload.js';
 import reminderRoutes from './api/reminder.js';
+import telatBayarRoutes from './api/telatBayar.js';
 
 dotenv.config();
 
@@ -25,6 +26,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/peserta', pesertaRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/reminder', reminderRoutes);
+app.use('/api/telat-bayar', telatBayarRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

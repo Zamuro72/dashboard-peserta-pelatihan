@@ -5,6 +5,7 @@
 			:isOpen="sidebarOpen" 
 			:currentPage="currentPage"
 			:reminderCount="reminderCount"
+			:telatBayarCount="telatBayarCount"
 			@close="sidebarOpen = false"
 			@navigate="handleNavigation"
 		/>
@@ -34,6 +35,17 @@
 						<span class="notification-badge">{{ reminderCount }}</span>
 					</button>
 
+					<!-- Telat Bayar Button -->
+					<button 
+						v-if="currentPage === 'dashboard' && telatBayarCount > 0" 
+						@click="currentPage = 'telat-bayar'"
+						class="telat-bayar-btn"
+						title="Lihat Peserta Telat Bayar"
+					>
+						<DollarSign :size="20" />
+						<span class="notification-badge">{{ telatBayarCount }}</span>
+					</button>
+
 					<button @click="showUploadModal = true" class="upload-btn-header">
 						<Upload :size="18" />
 						Upload
@@ -48,9 +60,14 @@
 
 		<!-- Main Content -->
 		<div class="main-content">
-			<!-- Show Reminder Page or Dashboard -->
+			<!-- Show Telat Bayar Page -->
+			<TelatBayarPage 
+				v-if="currentPage === 'telat-bayar'"
+			/>
+
+			<!-- Show Reminder Page -->
 			<ReminderPage 
-				v-if="currentPage === 'reminder'"
+				v-else-if="currentPage === 'reminder'"
 			/>
 
 			<div v-else>
@@ -232,6 +249,7 @@
 										<th>Sertifikat dari KSO/LSP</th>
 										<th>Sertifikat diterima oleh Kandel</th>
 										<th>Sertifikat diterima peserta</th>
+										<th>Aksi</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -245,7 +263,12 @@
 											/>
 										</td>
 										<td>{{ item.no }}</td>
-										<td class="font-medium">{{ item.nama_peserta }}</td>
+										<td class="font-medium">
+											<div class="name-with-badge">
+												{{ item.nama_peserta }}
+												<span v-if="item.telat_bayar" class="badge-telat-bayar">Telat Bayar</span>
+											</div>
+										</td>
 										<td>{{ item.nama_perusahaan }}</td>
 										<td>{{ item.nomor_whatsapp || '-' }}</td>
 										<td>{{ item.pelatihan }}</td>
@@ -269,6 +292,24 @@
 										<td>{{ item.sertifikat_dari_kso }}</td>
 										<td>{{ item.sertifikat_diterima_kandel }}</td>
 										<td>{{ item.sertifikat_diterima_peserta }}</td>
+										<td>
+											<button 
+												v-if="!item.telat_bayar"
+												@click="openTelatBayarModal(item)" 
+												class="btn-mark-telat"
+												title="Tandai Telat Bayar"
+											>
+												<DollarSign :size="16" />
+											</button>
+											<button 
+												v-else
+												@click="confirmUnmarkTelatBayar(item)" 
+												class="btn-unmark-telat"
+												title="Hapus Tanda Telat Bayar"
+											>
+												<X :size="16" />
+											</button>
+										</td>
 									</tr>
 								</tbody>
 							</table>
@@ -284,6 +325,39 @@
 			@close="showUploadModal = false"
 			@success="handleUploadSuccess"
 		/>
+
+		<!-- Telat Bayar Modal -->
+		<div v-if="showTelatBayarModal" class="modal-overlay" @click.self="showTelatBayarModal = false">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h2>Tandai Telat Bayar</h2>
+					<button @click="showTelatBayarModal = false" class="close-btn">
+						<X :size="24" />
+					</button>
+				</div>
+				<div class="modal-body">
+					<div class="form-group">
+						<label>Nama Peserta</label>
+						<input type="text" :value="selectedPeserta?.nama_peserta" disabled class="input-disabled" />
+					</div>
+					<div class="form-group">
+						<label>Catatan Telat Bayar</label>
+						<textarea 
+							v-model="telatBayarCatatan" 
+							rows="4"
+							placeholder="Masukkan catatan (opsional)..."
+							class="textarea-input"
+						></textarea>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button @click="showTelatBayarModal = false" class="btn-cancel">Batal</button>
+					<button @click="markTelatBayar" :disabled="marking" class="btn-confirm">
+						{{ marking ? 'Menyimpan...' : 'Tandai' }}
+					</button>
+				</div>
+			</div>
+		</div>
 
 		<div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
 			<div class="modal-content delete-modal">
@@ -313,12 +387,13 @@
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
-import { Search, Upload, LogOut, Filter, Trash2, FileSpreadsheet, Download, Bell, AlertTriangle, X } from 'lucide-vue-next'
+import { Search, Upload, LogOut, Filter, Trash2, FileSpreadsheet, Download, Bell, AlertTriangle, X, DollarSign } from 'lucide-vue-next'
 import api from '../services/api'
 import UploadModal from './UploadModal.vue'
 import LogoutModal from './LogoutModal.vue'
 import Sidebar from './Sidebar.vue'
 import ReminderPage from './ReminderPage.vue'
+import TelatBayarPage from './TelatBayarPage.vue'
 
 const emit = defineEmits(['logout'])
 
@@ -333,6 +408,7 @@ const stats = ref({ total: 0, bnsp: 0, kemnaker: 0 })
 const sidebarOpen = ref(false)
 const currentPage = ref('dashboard')
 const reminderCount = ref(0)
+const telatBayarCount = ref(0)
 const dismissBanner = ref(false)
 
 const loadingYears = ref(true)
@@ -346,6 +422,11 @@ const selectedIds = ref([])
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 
+const showTelatBayarModal = ref(false)
+const selectedPeserta = ref(null)
+const telatBayarCatatan = ref('')
+const marking = ref(false)
+
 const isAllSelected = computed(() => {
 	return pesertaData.value.length > 0 && selectedIds.value.length === pesertaData.value.length
 })
@@ -353,6 +434,7 @@ const isAllSelected = computed(() => {
 onMounted(() => {
 	fetchArsipYears()
 	fetchReminderCount()
+	fetchTelatBayarCount()
 })
 
 watch([searchTerm, filterType], () => {
@@ -373,6 +455,15 @@ const fetchReminderCount = async () => {
 		reminderCount.value = response.count || 0
 	} catch (error) {
 		console.error('Error fetching reminder count:', error)
+	}
+}
+
+const fetchTelatBayarCount = async () => {
+	try {
+		const response = await api.getTelatBayarCount()
+		telatBayarCount.value = response.count || 0
+	} catch (error) {
+		console.error('Error fetching telat bayar count:', error)
 	}
 }
 
@@ -464,6 +555,7 @@ const handleUploadSuccess = () => {
 	showUploadModal.value = false
 	fetchArsipYears()
 	fetchReminderCount()
+	fetchTelatBayarCount()
 	selectedYear.value = ''
 	selectedFileId.value = null
 	arsipFiles.value = []
@@ -547,6 +639,46 @@ const deleteFile = async (file) => {
 	}
 }
 
+const openTelatBayarModal = (item) => {
+	selectedPeserta.value = item
+	telatBayarCatatan.value = ''
+	showTelatBayarModal.value = true
+}
+
+const markTelatBayar = async () => {
+	try {
+		marking.value = true
+		await api.markTelatBayar(selectedPeserta.value.id, telatBayarCatatan.value)
+		alert('Peserta berhasil ditandai telat bayar')
+		showTelatBayarModal.value = false
+		await fetchPeserta()
+		await fetchTelatBayarCount()
+	} catch (error) {
+		console.error('Error marking telat bayar:', error)
+		alert('Gagal menandai peserta')
+	} finally {
+		marking.value = false
+	}
+}
+
+const confirmUnmarkTelatBayar = (item) => {
+	if (confirm(`Hapus tanda telat bayar untuk "${item.nama_peserta}"?`)) {
+		unmarkTelatBayar(item.id)
+	}
+}
+
+const unmarkTelatBayar = async (id) => {
+	try {
+		await api.unmarkTelatBayar(id)
+		alert('Tanda telat bayar berhasil dihapus')
+		await fetchPeserta()
+		await fetchTelatBayarCount()
+	} catch (error) {
+		console.error('Error unmarking:', error)
+		alert('Gagal menghapus tanda')
+	}
+}
+
 const formatFileSize = (bytes) => {
 	if (bytes === 0) return '0 Bytes'
 	const k = 1024
@@ -567,6 +699,7 @@ const formatDate = (date) => {
 </script>
 
 <style scoped>
+/* Existing styles... */
 .dashboard {
 	min-height: 100vh;
 	background-color: #f3f4f6;
@@ -616,7 +749,8 @@ const formatDate = (date) => {
 	gap: 0.75rem;
 }
 
-.notification-btn {
+.notification-btn,
+.telat-bayar-btn {
 	position: relative;
 	display: flex;
 	align-items: center;
@@ -627,15 +761,28 @@ const formatDate = (date) => {
 	cursor: pointer;
 	font-size: 0.875rem;
 	font-weight: 500;
-	background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
 	color: white;
-	box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 	transition: all 0.3s;
+}
+
+.notification-btn {
+	background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+	box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
 }
 
 .notification-btn:hover {
 	transform: translateY(-2px);
 	box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+}
+
+.telat-bayar-btn {
+	background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+	box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.telat-bayar-btn:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 24px rgba(220, 38, 38, 0.4);
 }
 
 .notification-badge {
@@ -650,6 +797,10 @@ const formatDate = (date) => {
 	border-radius: 9999px;
 	min-width: 20px;
 	text-align: center;
+}
+
+.telat-bayar-btn .notification-badge {
+	background-color: #f59e0b;
 }
 
 .upload-btn-header,

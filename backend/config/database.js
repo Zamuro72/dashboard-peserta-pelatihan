@@ -35,7 +35,7 @@ const initTables = () => {
       )
     `);
 
-    // Tabel peserta
+    // Tabel peserta - UPDATED dengan telat_bayar dan catatan
     db.exec(`
       CREATE TABLE IF NOT EXISTS peserta (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +53,8 @@ const initTables = () => {
         sertifikat_dari_kso TEXT,
         sertifikat_diterima_kandel TEXT,
         sertifikat_diterima_peserta TEXT,
+        telat_bayar INTEGER DEFAULT 0,
+        catatan_telat_bayar TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (arsip_id) REFERENCES arsip(id) ON DELETE CASCADE
@@ -82,6 +84,30 @@ const initTables = () => {
         console.log('⚠️ Column already exists or other error:', e.message);
       } else {
         console.log('✅ Column nomor_whatsapp already exists');
+      }
+    }
+
+    // Add telat_bayar column if not exists
+    try {
+      db.exec(`ALTER TABLE peserta ADD COLUMN telat_bayar INTEGER DEFAULT 0`);
+      console.log('✅ Column telat_bayar added');
+    } catch (e) {
+      if (!e.message.includes('duplicate column name')) {
+        console.log('⚠️ Column already exists or other error:', e.message);
+      } else {
+        console.log('✅ Column telat_bayar already exists');
+      }
+    }
+
+    // Add catatan_telat_bayar column if not exists
+    try {
+      db.exec(`ALTER TABLE peserta ADD COLUMN catatan_telat_bayar TEXT`);
+      console.log('✅ Column catatan_telat_bayar added');
+    } catch (e) {
+      if (!e.message.includes('duplicate column name')) {
+        console.log('⚠️ Column already exists or other error:', e.message);
+      } else {
+        console.log('✅ Column catatan_telat_bayar already exists');
       }
     }
 
