@@ -2,8 +2,8 @@
   <div class="login-container">
     <div class="login-box">
       <div class="login-header">
-        <h1>Dashboard Peserta</h1>
-        <p>Sistem Manajemen Pelatihan</p>
+        <h1>Dashboard Kandel Sekeco</h1>
+        <p>Sistem Manajemen Kandel</p>
       </div>
 
       <div class="login-form">

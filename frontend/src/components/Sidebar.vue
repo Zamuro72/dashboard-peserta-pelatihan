@@ -37,18 +37,28 @@
           <span>Reminder Sertifikat</span>
           <span v-if="reminderCount > 0" class="badge-count">{{ reminderCount }}</span>
         </button>
+
+        <button 
+          @click="navigateTo('telat-bayar')"
+          :class="['nav-item', { active: currentPage === 'telat-bayar' }]"
+        >
+          <DollarSign :size="20" />
+          <span>Telat Bayar</span>
+          <span v-if="telatBayarCount > 0" class="badge-count badge-danger">{{ telatBayarCount }}</span>
+        </button>
       </nav>
     </div>
   </div>
 </template>
 
 <script setup>
-import { X, LayoutDashboard, Bell } from 'lucide-vue-next'
+import { X, LayoutDashboard, Bell, DollarSign } from 'lucide-vue-next'
 
 defineProps({
   isOpen: Boolean,
   currentPage: String,
-  reminderCount: Number
+  reminderCount: Number,
+  telatBayarCount: Number
 })
 
 const emit = defineEmits(['close', 'navigate'])
@@ -191,6 +201,16 @@ const navigateTo = (page) => {
 .nav-item.active .badge-count {
   background-color: white;
   color: #667eea;
+}
+
+.badge-danger {
+  background-color: #dc2626 !important;
+  color: white !important;
+}
+
+.nav-item.active .badge-danger {
+  background-color: white !important;
+  color: #dc2626 !important;
 }
 
 @media (max-width: 640px) {

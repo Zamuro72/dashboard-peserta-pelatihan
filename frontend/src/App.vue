@@ -10,7 +10,7 @@
             <div class="hourglass-bottom"></div>
           </div>
         </div>
-        <h2 class="loader-text">Dashboard Peserta Pelatihan</h2>
+        <h2 class="loader-text">Dashboard Kandel Sekeco</h2>
         <p class="loader-subtext">Memuat aplikasi...</p>
       </div>
     </div>

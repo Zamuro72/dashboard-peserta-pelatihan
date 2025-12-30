@@ -21,7 +21,7 @@
 						@click="sidebarOpen = true"
 						style="cursor: pointer;"
 					/>
-					<h1>Dashboard Peserta Pelatihan</h1>
+					<h1>Dashboard Kelola Peserta</h1>
 				</div>
 				<div class="header-actions">
 					<!-- Notification Bell -->
