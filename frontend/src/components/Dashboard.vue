@@ -21,7 +21,7 @@
 						@click="sidebarOpen = true"
 						style="cursor: pointer;"
 					/>
-					<h1>Dashboard Kelola Peserta</h1>
+					<h1>Dashboard Peserta Pelatihan</h1>
 				</div>
 				<div class="header-actions">
 					<!-- Notification Bell -->
@@ -299,7 +299,7 @@
 												class="btn-mark-telat"
 												title="Tandai Telat Bayar"
 											>
-												<DollarSign :size="16" />
+												Suka Telat Bayar
 											</button>
 											<button 
 												v-else
@@ -308,6 +308,7 @@
 												title="Hapus Tanda Telat Bayar"
 											>
 												<X :size="16" />
+												Hapus Tanda
 											</button>
 										</td>
 									</tr>
@@ -699,7 +700,6 @@ const formatDate = (date) => {
 </script>
 
 <style scoped>
-/* Existing styles... */
 .dashboard {
 	min-height: 100vh;
 	background-color: #f3f4f6;
@@ -1242,7 +1242,7 @@ const formatDate = (date) => {
 table {
 	width: 100%;
 	border-collapse: collapse;
-	min-width: 1400px;
+	min-width: 1600px;
 }
 
 thead {
@@ -1290,8 +1290,31 @@ td {
 	white-space: nowrap;
 }
 
-.font-medium { font-weight: 500; }
-.text-center { text-align: center; }
+.font-medium { 
+	font-weight: 500; 
+}
+
+.text-center { 
+	text-align: center; 
+}
+
+.name-with-badge {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.badge-telat-bayar {
+	display: inline-block;
+	padding: 0.125rem 0.5rem;
+	border-radius: 9999px;
+	font-size: 0.625rem;
+	font-weight: 600;
+	background-color: #fee2e2;
+	color: #991b1b;
+	text-transform: uppercase;
+}
 
 .badge { 
 	display: inline-block; 
@@ -1315,6 +1338,49 @@ td {
 	color: #6b7280; 
 }
 
+/* Buttons untuk Telat Bayar */
+.btn-mark-telat {
+	padding: 0.375rem 0.75rem;
+	border: none;
+	border-radius: 0.375rem;
+	background-color: #dc2626;
+	color: white;
+	cursor: pointer;
+	font-size: 0.75rem;
+	font-weight: 500;
+	transition: all 0.2s;
+	white-space: nowrap;
+}
+
+.btn-mark-telat:hover {
+	background-color: #b91c1c;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(220, 38, 38, 0.3);
+}
+
+.btn-unmark-telat {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.375rem 0.75rem;
+	border: none;
+	border-radius: 0.375rem;
+	background-color: #6b7280;
+	color: white;
+	cursor: pointer;
+	font-size: 0.75rem;
+	font-weight: 500;
+	transition: all 0.2s;
+	white-space: nowrap;
+}
+
+.btn-unmark-telat:hover {
+	background-color: #4b5563;
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(107, 114, 128, 0.3);
+}
+
+/* Modal Styles */
 .modal-overlay {
 	position: fixed;
 	inset: 0;
@@ -1331,22 +1397,140 @@ td {
 	border-radius: 0.5rem;
 	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 	width: 100%;
-	max-width: 28rem;
+	max-width: 32rem;
 }
 
-.delete-modal .modal-header {
+.modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 	padding: 1.5rem;
 	border-bottom: 1px solid #e5e7eb;
 }
 
-.delete-modal .modal-header h2 {
+.modal-header h2 {
 	font-size: 1.25rem;
 	font-weight: bold;
 	color: #1f2937;
 }
 
-.delete-modal .modal-body {
+.close-btn {
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: #6b7280;
+	padding: 0.25rem;
+	display: flex;
+	align-items: center;
+	transition: color 0.2s;
+}
+
+.close-btn:hover {
+	color: #1f2937;
+}
+
+.modal-body {
 	padding: 1.5rem;
+}
+
+.form-group {
+	margin-bottom: 1rem;
+}
+
+.form-group:last-child {
+	margin-bottom: 0;
+}
+
+.form-group label {
+	display: block;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #374151;
+	margin-bottom: 0.5rem;
+}
+
+.input-disabled {
+	width: 100%;
+	padding: 0.5rem 1rem;
+	border: 1px solid #e5e7eb;
+	border-radius: 0.5rem;
+	background-color: #f9fafb;
+	color: #6b7280;
+	font-size: 0.875rem;
+}
+
+.textarea-input {
+	width: 100%;
+	padding: 0.5rem 1rem;
+	border: 1px solid #d1d5db;
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	resize: vertical;
+	font-family: inherit;
+}
+
+.textarea-input:focus {
+	outline: none;
+	border-color: #2563eb;
+	box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.modal-footer {
+	display: flex;
+	gap: 0.5rem;
+	padding: 1.5rem;
+	border-top: 1px solid #e5e7eb;
+}
+
+.btn-cancel,
+.btn-confirm,
+.btn-delete {
+	flex: 1;
+	padding: 0.5rem 1rem;
+	border-radius: 0.5rem;
+	border: none;
+	font-size: 0.875rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.btn-cancel {
+	background-color: white;
+	border: 1px solid #d1d5db;
+	color: #374151;
+}
+
+.btn-cancel:hover {
+	background-color: #f9fafb;
+}
+
+.btn-confirm {
+	background-color: #dc2626;
+	color: white;
+}
+
+.btn-confirm:hover:not(:disabled) {
+	background-color: #b91c1c;
+}
+
+.btn-confirm:disabled {
+	background-color: #9ca3af;
+	cursor: not-allowed;
+}
+
+.btn-delete {
+	background-color: #dc2626;
+	color: white;
+}
+
+.btn-delete:hover:not(:disabled) {
+	background-color: #b91c1c;
+}
+
+.btn-delete:disabled {
+	background-color: #9ca3af;
+	cursor: not-allowed;
 }
 
 .delete-modal .modal-body p {
