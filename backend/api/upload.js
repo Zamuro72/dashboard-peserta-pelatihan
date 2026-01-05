@@ -85,13 +85,14 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
       year
     );
 
-    // Prepare statement untuk insert peserta - UPDATED dengan nomor_whatsapp
+    // Prepare statement untuk insert peserta - UPDATED dengan 4 kolom baru
     const insertStmt = db.prepare(`
       INSERT INTO peserta (
-        arsip_id, no, nama_peserta, nama_perusahaan, nomor_whatsapp, pelatihan, ujikom_praktek,
-        materi_skema, kso_lsp, skl_sertifikat, tanggal_invoice,
+        arsip_id, no, nama_peserta, nama_perusahaan, nomor_whatsapp, tanggal_lahir,
+        pelatihan, ujikom_praktek, materi_skema, kso_lsp, skl_sertifikat, 
+        tanggal_invoice, status_pembayaran, tanggal_penerbitan_sertifikat,
         sertifikat_dari_kso, sertifikat_diterima_kandel, sertifikat_diterima_peserta
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     let successCount = 0;
@@ -107,13 +108,16 @@ router.post('/', authenticateToken, upload.single('file'), async (req, res) => {
             row.no || null,
             row.nama_peserta || '',
             row.nama_perusahaan || '',
-            row.nomor_whatsapp || '', // TAMBAHAN BARU
+            row.nomor_whatsapp || '',
+            row.tanggal_lahir || '',
             row.pelatihan || '',
             row.ujikom_praktek || '',
             row.materi_skema || '',
             row.kso_lsp || '',
             row.skl_sertifikat || '',
             row.tanggal_invoice || '',
+            row.status_pembayaran || '',
+            row.tanggal_penerbitan_sertifikat || '',
             row.sertifikat_dari_kso || '',
             row.sertifikat_diterima_kandel || '',
             row.sertifikat_diterima_peserta || ''

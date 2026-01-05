@@ -35,7 +35,7 @@ const initTables = () => {
       )
     `);
 
-    // Tabel peserta - UPDATED dengan telat_bayar dan catatan
+    // Tabel peserta - UPDATED dengan kolom baru
     db.exec(`
       CREATE TABLE IF NOT EXISTS peserta (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,12 +44,15 @@ const initTables = () => {
         nama_peserta TEXT,
         nama_perusahaan TEXT,
         nomor_whatsapp TEXT,
+        tanggal_lahir TEXT,
         pelatihan TEXT,
         ujikom_praktek TEXT,
         materi_skema TEXT,
         kso_lsp TEXT,
         skl_sertifikat TEXT,
         tanggal_invoice TEXT,
+        status_pembayaran TEXT,
+        tanggal_penerbitan_sertifikat TEXT,
         sertifikat_dari_kso TEXT,
         sertifikat_diterima_kandel TEXT,
         sertifikat_diterima_peserta TEXT,
@@ -108,6 +111,42 @@ const initTables = () => {
         console.log('⚠️ Column already exists or other error:', e.message);
       } else {
         console.log('✅ Column catatan_telat_bayar already exists');
+      }
+    }
+
+    // Add tanggal_lahir column if not exists
+    try {
+      db.exec(`ALTER TABLE peserta ADD COLUMN tanggal_lahir TEXT`);
+      console.log('✅ Column tanggal_lahir added');
+    } catch (e) {
+      if (!e.message.includes('duplicate column name')) {
+        console.log('⚠️ Column already exists or other error:', e.message);
+      } else {
+        console.log('✅ Column tanggal_lahir already exists');
+      }
+    }
+
+    // Add status_pembayaran column if not exists
+    try {
+      db.exec(`ALTER TABLE peserta ADD COLUMN status_pembayaran TEXT`);
+      console.log('✅ Column status_pembayaran added');
+    } catch (e) {
+      if (!e.message.includes('duplicate column name')) {
+        console.log('⚠️ Column already exists or other error:', e.message);
+      } else {
+        console.log('✅ Column status_pembayaran already exists');
+      }
+    }
+
+    // Add tanggal_penerbitan_sertifikat column if not exists
+    try {
+      db.exec(`ALTER TABLE peserta ADD COLUMN tanggal_penerbitan_sertifikat TEXT`);
+      console.log('✅ Column tanggal_penerbitan_sertifikat added');
+    } catch (e) {
+      if (!e.message.includes('duplicate column name')) {
+        console.log('⚠️ Column already exists or other error:', e.message);
+      } else {
+        console.log('✅ Column tanggal_penerbitan_sertifikat already exists');
       }
     }
 

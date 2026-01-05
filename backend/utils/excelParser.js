@@ -70,12 +70,11 @@ export const parseExcel = (filePath) => {
           console.log('✓ Found NAMA_PERUSAHAAN at column', index);
         }
         
-        // Nomor WhatsApp - TAMBAHAN BARU
+        // Nomor WhatsApp - UPDATED
         if (h.includes('nomor') && h.includes('whatsapp')) {
           colMap.nomor_whatsapp = index;
           console.log('✓ Found NOMOR_WHATSAPP at column', index);
         }
-        // Alternatif deteksi WhatsApp
         else if (h.includes('no') && h.includes('wa')) {
           colMap.nomor_whatsapp = index;
           console.log('✓ Found NOMOR_WHATSAPP at column', index, '(no wa)');
@@ -85,14 +84,24 @@ export const parseExcel = (filePath) => {
           console.log('✓ Found NOMOR_WHATSAPP at column', index, '(alternative)');
         }
         
-        // Pelatihan - PERBAIKAN: cek berbagai variasi
+        // Tanggal Lahir - NEW
+        if (h.includes('tanggal') && h.includes('lahir')) {
+          colMap.tanggal_lahir = index;
+          console.log('✓ Found TANGGAL_LAHIR at column', index);
+        }
+        else if (h.includes('tgl') && h.includes('lahir')) {
+          colMap.tanggal_lahir = index;
+          console.log('✓ Found TANGGAL_LAHIR at column', index, '(tgl lahir)');
+        }
+        
+        // Pelatihan
         if ((h === 'pelatihan' || h.includes('tanggal pelatihan') || h.includes('tgl pelatihan')) 
             && !h.includes('peserta') && !h.includes('ujikom') && !h.includes('praktek')) {
           colMap.pelatihan = index;
           console.log('✓ Found PELATIHAN at column', index);
         }
         
-        // Ujikom/Praktek - PERBAIKAN: cek berbagai variasi
+        // Ujikom/Praktek
         if (h.includes('ujikom') || h.includes('uji praktek') || h.includes('praktek') || 
             (h.includes('uji') && h.includes('praktek'))) {
           colMap.ujikom_praktek = index;
@@ -124,19 +133,42 @@ export const parseExcel = (filePath) => {
           console.log('✓ Found TANGGAL_INVOICE at column', index);
         }
         
+        // Status Pembayaran - NEW
+        if (h.includes('status') && h.includes('pembayaran')) {
+          colMap.status_pembayaran = index;
+          console.log('✓ Found STATUS_PEMBAYARAN at column', index);
+        }
+        
+        // Tanggal Penerbitan Sertifikat Peserta - NEW
+        if (h.includes('tanggal') && h.includes('penerbitan') && h.includes('sertifikat') && h.includes('peserta')) {
+          colMap.tanggal_penerbitan_sertifikat = index;
+          console.log('✓ Found TANGGAL_PENERBITAN_SERTIFIKAT at column', index);
+        }
+        else if (h.includes('tgl') && h.includes('penerbitan') && h.includes('sertifikat')) {
+          colMap.tanggal_penerbitan_sertifikat = index;
+          console.log('✓ Found TANGGAL_PENERBITAN_SERTIFIKAT at column', index, '(alternative)');
+        }
+        else if (h.includes('penerbitan') && h.includes('sertifikat') && h.includes('peserta')) {
+          colMap.tanggal_penerbitan_sertifikat = index;
+          console.log('✓ Found TANGGAL_PENERBITAN_SERTIFIKAT at column', index, '(short)');
+        }
+        
         // Sertifikat diberikan dari KSO/LSP
         if (h.includes('sertifikat') && h.includes('dari') && (h.includes('kso') || h.includes('lsp'))) {
           colMap.sertifikat_dari_kso = index;
           console.log('✓ Found SERTIFIKAT_DARI_KSO at column', index);
         }
+        else if (h.includes('sertifikat') && h.includes('diberikan') && (h.includes('kso') || h.includes('lsp'))) {
+          colMap.sertifikat_dari_kso = index;
+          console.log('✓ Found SERTIFIKAT_DARI_KSO at column', index, '(diberikan)');
+        }
         
-        // Sertifikat diterima Kandel - PERBAIKAN: deteksi lebih fleksibel
+        // Sertifikat diterima Kandel
         if (h.includes('sertifikat') && h.includes('diterima') && 
             (h.includes('kandel') || h.includes('oleh kandel'))) {
           colMap.sertifikat_diterima_kandel = index;
           console.log('✓ Found SERTIFIKAT_DITERIMA_KANDEL at column', index);
         }
-        // Alternatif: cek hanya "diterima" dan "kandel" tanpa harus ada "sertifikat"
         else if (h.includes('diterima') && h.includes('kandel') && !h.includes('peserta')) {
           colMap.sertifikat_diterima_kandel = index;
           console.log('✓ Found SERTIFIKAT_DITERIMA_KANDEL at column', index, '(alternative match)');
@@ -148,24 +180,6 @@ export const parseExcel = (filePath) => {
           console.log('✓ Found SERTIFIKAT_DITERIMA_PESERTA at column', index);
         }
       });
-
-      // FALLBACK: Jika pelatihan/ujikom tidak ketemu, coba deteksi by position
-      // Biasanya struktur: No | Nama | Perusahaan | WhatsApp | Pelatihan | Ujikom | ...
-      if (!colMap.pelatihan && headers.length > 4) {
-        // Cek kolom E (index 4) - setelah WhatsApp
-        console.log('⚠️ Pelatihan not found, checking by position...');
-        
-        if (!colMap.pelatihan) {
-          colMap.pelatihan = 4;
-          console.log('✓ Set PELATIHAN to column E (index 4) by fallback');
-        }
-        
-        // Kolom F biasanya Ujikom
-        if (!colMap.ujikom_praktek) {
-          colMap.ujikom_praktek = 5;
-          console.log('✓ Set UJIKOM_PRAKTEK to column F (index 5) by fallback');
-        }
-      }
 
       console.log('📍 Final column mapping:', colMap);
 
@@ -217,6 +231,18 @@ export const parseExcel = (filePath) => {
             }
           }
 
+          // Normalize Status Pembayaran (v = ✓, x = ✗) - NEW
+          if (field === 'status_pembayaran') {
+            const normalized = value.toString().toLowerCase().trim();
+            if (normalized === 'v' || normalized === '✓') {
+              value = 'v';
+            } else if (normalized === 'x' || normalized === '✗') {
+              value = 'x';
+            } else {
+              value = '';
+            }
+          }
+
           rowData[field] = value ? value.toString().trim() : '';
         });
 
@@ -226,8 +252,11 @@ export const parseExcel = (filePath) => {
             nama: rowData.nama_peserta,
             perusahaan: rowData.nama_perusahaan,
             whatsapp: rowData.nomor_whatsapp,
+            tanggal_lahir: rowData.tanggal_lahir,
             pelatihan: rowData.pelatihan,
-            ujikom: rowData.ujikom_praktek
+            ujikom: rowData.ujikom_praktek,
+            status_pembayaran: rowData.status_pembayaran,
+            tanggal_penerbitan: rowData.tanggal_penerbitan_sertifikat
           });
           mappedData.push(rowData);
         }
